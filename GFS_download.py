@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-01 13:04 on marvin
+# - L@ST MODIFIED: 2018-11-01 19:04 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -293,6 +293,10 @@ if __name__ == "__main__":
     # Else a dict with N/S/E/W in degrees (0-360!)
     subset = {"W": 5, "E": 18, "S": 45, "N": 55}
 
+    # Time to sleep between two requests
+    import time
+    sleeping_time = 5;
+
     # List of the required parameters. Check the index file
     # to see the available parameters. Always <param>:<level> where
     # <param> and <level> are the strings as in the grib index file.
@@ -414,6 +418,9 @@ if __name__ == "__main__":
 
             # Else post-processing the data
             bar()
+
+            print("Sleeping {:d} seconds ...".format(sleeping_time))
+            time.sleep(sleeping_time)
 
 
 
