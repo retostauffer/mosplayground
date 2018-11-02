@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-02 10:25 on marvin
+# - L@ST MODIFIED: 2018-11-02 13:16 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -573,6 +573,13 @@ if __name__ == "__main__":
             idx = parse_index_file(files["idx"])
         except:
             print("Problems downloading the index file! Continue and skip this for now ...")
+            continue
+
+        # File is empty?
+        if idx is None:
+            print("Not able to download/parse the index file. Possible reason:")
+            print("problems with internet/server or the forecast is not available.")
+            print("Continue and skip this one ...")
             continue
 
         # List of the GFS parameter names, used to check what
