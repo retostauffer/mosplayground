@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-02 10:19 on marvin
+# - L@ST MODIFIED: 2018-11-02 10:25 on marvin
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -592,7 +592,10 @@ if __name__ == "__main__":
             continue
 
         # Check if all files exist. If so, we can skip this download.
-        check = check_files_exist(files, params, not subset is None, split_files)
+        file_check = check_files_exist(files, params, not subset is None, split_files)
+        if file_check: 
+            print("All files on disc, continue ...")
+            continue
 
         # If wgrib2 exists: used to subset the grib file (-small_grib) and
         # to create the index file is split_files is set to True.
