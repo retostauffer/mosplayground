@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-02 10:17 on marvin
+# - L@ST MODIFIED: 2018-11-02 10:19 on marvin
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -496,7 +496,7 @@ if __name__ == "__main__":
 
     # Time to sleep between two requests
     import time
-    sleeping_time = 5;
+    sleeping_time = 2;
 
     # Split files into parameter-based files?
     split_files = True
