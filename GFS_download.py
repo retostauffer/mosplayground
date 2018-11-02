@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-01 19:04 on pc24-c707
+# - L@ST MODIFIED: 2018-11-02 08:28 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -295,7 +295,7 @@ if __name__ == "__main__":
 
     # Time to sleep between two requests
     import time
-    sleeping_time = 5;
+    sleeping_time = 2;
 
     # List of the required parameters. Check the index file
     # to see the available parameters. Always <param>:<level> where
