@@ -3,3 +3,4 @@
 # Ignore
 *.pyc
 data/
+_*.[oe]*

@@ -29,3 +29,10 @@ specific dates (always Friday) such that I can make use of the
 observations from the tournament data base and do not have to
 find observations somewhere else.
 
+Convert Grib2 to NetCDF
+=======================
+
+The script `GFS_convert.py` takes all GFS subset files and combines
+them in one single NetCDF file per model initialization. These files
+will be used later for the interpolation and whatever comes next.
+Does not delete the grib files.
