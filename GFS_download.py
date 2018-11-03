@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-03 16:58 on pc24-c707
+# - L@ST MODIFIED: 2018-11-03 17:47 on marvin
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -689,8 +689,8 @@ if __name__ == "__main__":
         raise ValueError("Sorry, no data before 2016-12-01")
 
     # Reading parameter configuration
-    config = read_config("GFS_config.conf", args["set"])
-    if args["devel"]: config.read("GFS_devel.conf")
+    config = read_config("config.conf", args["set"])
+    if args["devel"]: config.read("devel.conf")
 
     bar(); print config; bar()
 
