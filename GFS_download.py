@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-03 16:58 on pc24-c707
+# - L@ST MODIFIED: 2018-11-03 18:30 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -220,7 +220,7 @@ def parse_index_file(idxfile, remote = True):
         import urllib2
         try:
             req  = urllib2.Request(idxfile)
-            data = urllib2.urlopen(req).read().split("\n")
+            data = urllib2.urlopen(req).read()
         except Exception as e:
             print("[!] Problems reading index file\n    {:s}\n    ... return None".format(idxfile))
             return None
@@ -233,7 +233,11 @@ def parse_index_file(idxfile, remote = True):
         if not isfile(idxfile):
             raise Exception("file {:s} does ont exist on disc".format(idxfile))
         with open(idxfile, "r") as fid:
-            data = "".join(fid.readlines()).split("\n")
+            data = "".join(fid.readlines())
+
+    if len(data) == 0:  return None
+    else:               data = data.split("\n")
+       
 
     # List to store the required index message information
     idx_entries = []
@@ -721,6 +725,7 @@ if __name__ == "__main__":
         # with forecast step).
         idx = parse_index_file(files["idx"])
         if idx is None:
+            print("Create local index file, as index file does not exist!")
             idx = create_index_file(files["grib"])
 
         # File is empty?
