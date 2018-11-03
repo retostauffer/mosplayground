@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-03 16:28 on pc24-c707
+# - L@ST MODIFIED: 2018-11-03 16:58 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -261,6 +261,74 @@ def parse_index_file(idxfile, remote = True):
 
     # Go trough the entries to find the messages we request for.
     return idx_entries
+
+
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+def create_index_file(grbfile):
+    """parse_index_file(grbfile):
+ 
+    Well, this is not very efficient. If I cannot find the index file
+    on the server (happens every now and then) I am simply downloading
+    the grib2 file if existing, create my own index file, and use
+    this index file. However, at this point I already have a local
+    copy of the grib2 file and I could use this rather than downloading
+    via curl once again. But ... TODO.
+
+    Parameters
+    ----------
+    grbfile : str
+        url of the remote grib2 file.
+
+    Returns
+    -------
+    Either None if the grib2 file does not exist (in this case we
+    cannot create an index file locally) or what parse_index_file returns.
+    """
+
+    # Requires wgrib2: check if existing
+    import distutils.spawn
+    check = distutils.spawn.find_executable("wgrib2")
+    if not check: 
+        print("[!] Creating index file on your own does not work (wgrib2 missing), skip.")
+        return None
+
+    # Import library
+    try:
+        from urllib import urlretrieve # Python 2
+    except ImportError:
+        from urllib.request import urlretrieve # Python 3
+
+    import tempfile
+    tmp1 = tempfile.NamedTemporaryFile(prefix = "GFS_grib_")
+    tmp2 = tempfile.NamedTemporaryFile(prefix = "GFS_idx_")
+    try:
+        urlretrieve(grbfile, tmp1.name)
+    except:
+        return None
+    
+    import subprocess as sub
+    import os
+    print(tmp1.name)
+    print(grbfile)
+    os.system("wgrib2 {:s}".format(tmp1.name))
+    p = sub.Popen(["wgrib2", tmp1.name],
+                  stdout = sub.PIPE, stderr = sub.PIPE)
+    out, err = p.communicate()
+
+    if not p.returncode == 0:
+        print("[!] Not able to create proper index file in create_index_file, return None")
+        return None
+
+    with open(tmp2.name, "w") as fid: fid.write(out)
+
+    idx = parse_index_file(tmp2.name, remote = False)
+    tmp1.close()
+    tmp2.close()
+      
+    # Return list
+    return idx
+
 
 
 # -------------------------------------------------------------------
@@ -643,13 +711,17 @@ if __name__ == "__main__":
         # Generate remote file URL's
         files = get_file_names(baseurl, date, step, filedir)
 
+        # Check if all files exist. If so, we can skip this download.
+        file_check = check_files_exist(files, config.params, not subset is None, split_files)
+        if file_check: 
+            print("All files on disc, continue ...")
+            continue
+
         # Read index file (once per forecast step as the file changes
         # with forecast step).
-        try:
-            idx = parse_index_file(files["idx"])
-        except:
-            print("Problems downloading the index file! Continue and skip this for now ...")
-            continue
+        idx = parse_index_file(files["idx"])
+        if idx is None:
+            idx = create_index_file(files["grib"])
 
         # File is empty?
         if idx is None:
@@ -672,12 +744,6 @@ if __name__ == "__main__":
             continue
         if len(required) == 0:
             print("Could not find any required fields, skip ...")
-            continue
-
-        # Check if all files exist. If so, we can skip this download.
-        file_check = check_files_exist(files, config.params, not subset is None, split_files)
-        if file_check: 
-            print("All files on disc, continue ...")
             continue
 
         # If wgrib2 exists: used to subset the grib file (-small_grib) and
