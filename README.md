@@ -29,6 +29,27 @@ specific dates (always Friday) such that I can make use of the
 observations from the tournament data base and do not have to
 find observations somewhere else.
 
+What it does:
+
+* Reading `GFS_config.conf` (if the `--devel` flag is set sequentially
+  reading trough (`GFS_config.conf` and `GFS_devel.conf`)
+* Given the config: trying to download the deterministic forecasts
+  from the nomads https servers (for one specific model run).
+    * Check if all grib2 files are existing on local dist. If so, skip this
+      one and proceed to the next forecast step.
+    * Download inventory (if available)
+    * If not available: download grib2 (if available) and create inventory
+      (at this point I should make use of the local grib2 file, at the moment
+      I just use the inventory ..., requires `wgrib2` to be installed)
+    * Parse inventory file, identify the parameters we need
+    * Download the segments of the grib2 file we requested for (curl)
+    * If subsetting is requested: make spatial subset (required `wgrib2` to
+      be installed)
+    * If `split_files = True`: split the grib file in parameter-specific grib2
+      files (requires `wgrib2` to be installed). This actually only makes sense
+      for development purposes, in an operational setting one should download
+      one file [optionally subset it], and use this for further processing.
+
 Convert Grib2 to NetCDF
 =======================
 

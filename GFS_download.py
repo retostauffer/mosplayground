@@ -693,8 +693,8 @@ if __name__ == "__main__":
         raise ValueError("Sorry, no data before 2016-12-01")
 
     # Reading parameter configuration
-    config = read_config("GFS_config.conf", args["set"])
-    if args["devel"]: config.read("GFS_devel.conf")
+    config = read_config("config.conf", args["set"])
+    if args["devel"]: config.read("devel.conf")
 
     bar(); print config; bar()
 
