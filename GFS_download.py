@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-03 15:08 on pc24-c707
+# - L@ST MODIFIED: 2018-11-03 16:28 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -262,6 +262,9 @@ def parse_index_file(idxfile, remote = True):
     # Go trough the entries to find the messages we request for.
     return idx_entries
 
+
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
 def get_required_bytes(idx, params, stopifnot = False):
     """get_required_bytes(idx, params, stopifnot = False)
 
@@ -331,36 +334,102 @@ def download_range(grib, local, range):
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
-def read_param_config(file):
-    """read_param_config(file)
+class read_config():
 
-    Reading the required parameter configuration from the config file.
+    def __init__(self, file, paramset = None):
+        """read_config(file)
 
-    Parameters
-    ----------
-    file : str
-        name/path of the configuration file
+        Reading the required configuration from the config file.
 
-    Returns
-    -------
-    Returns a dict with pairs of <shortName>:<GFS parameter definition>
-    and defines what has to be downloaded.
-    """
+        Parameters
+        ----------
+        file : str
+            name/path of the configuration file
+        paramset : None or str
+            if None the [param] config will be read, else the
+            [param <set>] config is parsed from the config file. Allowes
+            to process different sets of parameters with the same script.
 
-    if not isinstance(file, str):
-        raise ValueError("input \"file\" has to be a string (read_param_config method)")
-    from os.path import isfile
-    if not isfile(file):
-        raise ValueError("the file file=\"{:s}\" does not exist".format(file))
-            
-    # Else read config
-    import ConfigParser
-    CNF = ConfigParser.ConfigParser()
-    CNF.read("config.conf")
-    params = {}
-    for rec in CNF.items("params"): params[rec[0]] = rec[1]
+        Returns
+        -------
+        No return, initializes a new class of type mos_config with a set
+        of arguments used to download/process the GFS forecasts.
+        """
 
-    return params
+        self.paramset = paramset
+        self.file = [] # Used to store the config file names
+        self.read(file, paramset = paramset)
+
+    def __repr__(self):
+
+        res = "GFS Configuration:\n"
+        res += "   Config read from (seq):    {:s}\n".format(", ".join(self.file))
+        res += "   Number of parameters:      {:d}\n".format(len(self.params))
+        res += "   Forecast steps:            {:s}\n".format(", ".join([str(x) for x in self.steps]))
+        res += "   Where to store grib files: {:s}\n".format(self.gribdir)
+        return(res)
+
+    def read(self, file, paramset = None):
+
+        if not isinstance(file, str):
+            raise ValueError("input \"file\" has to be a string (read_param_config method)")
+        from os.path import isfile
+        if not isfile(file):
+            raise ValueError("the file file=\"{:s}\" does not exist".format(file))
+                
+        # Read parameter configuration.
+        import ConfigParser
+        CNF = ConfigParser.ConfigParser()
+        CNF.read(file)
+
+        # Append file
+        self.file.append(file)
+        self._read_params(CNF)
+        self._read_steps(CNF)
+        self._read_gribdir(CNF)
+
+        # If one of the required items is missing: stop
+        for key in ["file", "params", "steps", "gribdir"]:
+            if not hasattr(self, key):
+                raise Exception("have not found proper \"{:s}\" definition in config file.".format(key))
+
+
+    def _read_gribdir(self, CNF):
+        try:
+            self.gribdir = CNF.get("main", "gribdir")
+        except:
+            return
+
+    def _read_params(self, CNF):
+
+        # If not yet set: create a new dictionary
+        if not hasattr(self, "params"): self.params = {}
+        section = "params" if not self.paramset else "params %s".format(self.paramset)
+        try:
+            for rec in CNF.items(section): self.params[rec[0]] = rec[1]
+        except:
+            return
+
+    def _read_steps(self, CNF):
+
+        try:
+            steps = CNF.get("main", "steps")
+        except:
+            return
+
+        # Trying to decode the user value
+        import re
+        if re.match("^[0-9]+$", steps):
+            self.steps = [int(steps)]
+        elif re.match("^[0-9,\s]+$", steps):
+            self.steps = [int(x.strip()) for x in steps.split(",")] 
+            self.steps = list(np.unique(self.steps))
+        elif re.match("^[0-9]+/to/[0-9]+/by/[0-9]+$", steps):
+            tmp = re.findall("([0-9]+)/to/([0-9]+)/by/([0-9]+)$", steps)[0]
+            self.steps = list(np.arange(int(tmp[0]), int(tmp[1])+1, int(tmp[2]), dtype = int))
+        else:
+            raise Exception("misspecified option \"steps\" in [main] config section.")
+ 
 
 
 # -------------------------------------------------------------------
@@ -521,9 +590,17 @@ if __name__ == "__main__":
     parser.add_argument("--date","-d", type = str,
                help = "Model initialization date. Format has to be YYYY-mm-dd!" + \
                       " Date has to be 2016-12-01 and after. No data before this point.")
+    parser.add_argument("--set","-s", type = str, default = None,
+               help = "Which set of parameters should be downloaded? Default is None, " + \
+                      "reading [param] config. However, this allows you to set up multiple " + \
+                      "sets of parameters in the config file if needed.")
     parser.add_argument("--runhour","-r", type = int,
                help = "Model initialization hour, 0/6/12/18, integer.")
+    parser.add_argument("--devel", default = False, action = "store_true",
+               help = "Used for development. If set, the script reads config_devel.conf" + \
+                      " instead of config.conf.")
     args = vars(parser.parse_args())
+
 
     # Checking args
     if args["runhour"] is None or args["date"] is None:
@@ -544,28 +621,23 @@ if __name__ == "__main__":
         raise ValueError("Sorry, no data before 2016-12-01")
 
     # Reading parameter configuration
-    params = read_param_config("config.conf")
+    config = read_config("GFS_config.conf", args["set"])
+    if args["devel"]: config.read("GFS_devel.conf")
 
-    # Steps/members. The +1 is required to get the required sequence!
-    steps   = np.arange(18, 84+1, 3, dtype = int)
-
-    bar()
-    print("Downloading steps:\n  {:s}".format(", ".join(["{:d}".format(x) for x in steps])))
-    print("For date/model initialization\n  {:s}".format(date.strftime("%Y-%m-%d %H:%M UTC")))
-    print("Base url:\n  {:s}".format(date.strftime(baseurl)))
-    bar()
+    bar(); print config; bar()
 
     # Specify and create output directory if necessary
-    filedir = "{:s}/{:s}".format(outdir, date.strftime("%Y%m%d%H%M"))
+    filedir = "{:s}/{:s}".format(config.gribdir, date.strftime("%Y%m%d%H%M"))
     if not os.path.isdir(filedir):
         try:
             os.makedirs(filedir)
         except:
             raise Exception("Cannot create directory {:s}!".format(filedir))
 
+
     # Looping over the different members first
     # Looping over forecast lead times
-    for step in steps:
+    for step in config.steps:
         print("Processing +{:03d}h forecast".format(step))
 
         # Generate remote file URL's
@@ -588,7 +660,7 @@ if __name__ == "__main__":
 
         # List of the GFS parameter names, used to check what
         # to download based on the inventory or index file.
-        gfs_params = [x[1] for x in params.iteritems()]
+        gfs_params = [x[1] for x in config.params.iteritems()]
 
         # Read/parse index file (if possible) and identify the
         # required sections (byte-sections) for curl download.
@@ -603,7 +675,7 @@ if __name__ == "__main__":
             continue
 
         # Check if all files exist. If so, we can skip this download.
-        file_check = check_files_exist(files, params, not subset is None, split_files)
+        file_check = check_files_exist(files, config.params, not subset is None, split_files)
         if file_check: 
             print("All files on disc, continue ...")
             continue
@@ -632,7 +704,7 @@ if __name__ == "__main__":
         # Split file
         if not check is None and split_files:
             split_grib_file(files["local"] if subset is None else files["subset"],
-                            filedir, date, step, params)
+                            filedir, date, step, config.params)
 
         # Else post-processing the data
         bar()
