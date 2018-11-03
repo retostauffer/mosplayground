@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-02 13:16 on pc24-c707
+# - L@ST MODIFIED: 2018-11-03 15:08 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -224,6 +224,10 @@ def parse_index_file(idxfile, remote = True):
         except Exception as e:
             print("[!] Problems reading index file\n    {:s}\n    ... return None".format(idxfile))
             return None
+        # If the file is empty
+        if len("".join(data)) == 0:
+            print("[!] Problems reading index file, was emptu")
+            return None
     else:
         from os.path import isfile
         if not isfile(idxfile):
@@ -301,7 +305,7 @@ def get_required_bytes(idx, params, stopifnot = False):
             missing.append(rec)
     if len(missing) > 0:
         print("[!] Could not find: {:s}".format(", ".join(missing)))
-        if stopifnot: raise Exception("Some parameters not found in index fiel! Check config.")
+        if stopifnot: raise Exception("Some parameters not found in index file! Check config.")
         
     # Return ranges to be downloaded
     return res
