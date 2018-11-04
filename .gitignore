@@ -4,3 +4,6 @@
 *.pyc
 data/
 _*.[oe]*
+
+obs_html/*
+obs_sqlite3/*
