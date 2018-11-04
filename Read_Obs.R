@@ -7,15 +7,15 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-03, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 12:14 on marvin
+# - L@ST MODIFIED: 2018-11-04 17:32 on marvin
 # -------------------------------------------------------------------
 
 
     #station <- 10384
-    station <- 10385
+    #station <- 10385
     #station <- 10469
     #station <- 10471
-    #station <- 11120
+    station <- 11120
 
     dbfile  <- sprintf("obs_sqlite3/obs_%d.sqlite3", station)
     stopifnot(file.exists(dbfile))
@@ -29,7 +29,7 @@
 
     library("zoo")
 
-    x <- zoo(subset(data, select = -c(datumsec)), as.POSIXct(data$datumsec, origin = "1970-01-01"))
+    data <- zoo(subset(data, select = -c(datumsec)), as.POSIXct(data$datumsec, origin = "1970-01-01"))
     #plot(x, type = "p", pch = ".")
 
     get_wt <- function(station) {
@@ -46,10 +46,27 @@
     }
 
     mysql <- get_wt(station)
-    mysql$ww <- ifelse(mysql$ww > 500, NA, mysql$ww)
+    mysql$ww <- ifelse(mysql$ww > 120, NA, mysql$ww)
+
+    test <- function(data, mysql, col) {
+        tmp <- merge(data[,col], mysql[,col])
+        tmp <- na.omit(tmp)
+        if ( nrow(tmp) == 0 ) return();
+        names(tmp) <- c("ogimet", "mysql")
+        plot(tmp$ogimet, tmp$mysql, main = col)
+    }
+
+    par(mfrow=c(2,2))
+    test(data, mysql, "t")
+    test(data, mysql, "tmax12")
+    test(data, mysql, "dd")
+    test(data, mysql, "w1")
+
+    dbDisconnect(con)
 
 
-    test <- merge(x$ww, mysql$ww)
+
+
 
 
 

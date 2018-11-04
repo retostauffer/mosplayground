@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 16:29 on marvin
+# - L@ST MODIFIED: 2018-11-04 17:31 on marvin
 # -------------------------------------------------------------------
 
 
@@ -33,7 +33,7 @@ class obs_db():
             signed integer!
         """
 
-        self._colnames = colnames
+        self._colnames = [x.lower() for x in colnames]
 
         # Import and open connection
         import os
@@ -97,6 +97,7 @@ class obs_db():
         if not "datumsec" in colnames:
             raise ValueError("\"datetime\" column missing!")
 
+        colnames = [x.lower() for x in colnames]
 
         sql = "INSERT OR REPLACE INTO obs ({:s}) VALUES ({:s})".format(
                 ", ".join(colnames), ", ".join(["?"] * len(colnames)))
@@ -204,8 +205,8 @@ class get_synop_messages():
     #                     stn        date           YYGGggi  stn    message
     regex = re.compile("^([0-9]+),([0-9,]{16}),AAXX\s(.{5})\s([0-9]+)\s(.*)=$", re.M)
 
-    def __init__(self, file):
-        """get_synop_messages(file)
+    def __init__(self, file, verbose = False):
+        """get_synop_messages(file, verbose = False)
 
         Extract synop messages from .gz file (integrated surface data archive)
 
@@ -213,9 +214,14 @@ class get_synop_messages():
         ----------
         file : str
             path to the file to be read
+        verbose : bool
+            default False, if set to True each message will create some
+            output on stdout. Development feature.
         """
 
         from os.path import isfile
+        if not isinstance(verbose, bool):
+            raise Exception("input verbose has to be boolean True or False")
         if not isfile(file):
             raise Exception("file \"{:s}\" does not exist".format(file))
 
@@ -227,16 +233,24 @@ class get_synop_messages():
 
         import re
         mtch = self.regex.findall("\n".join(content))
-        print("Found {:d} messages in file".format(len(mtch)))
+        if verbose: print("Found {:d} messages in file".format(len(mtch)))
 
         self._data = []
         for rec in mtch:
             # NIL message: skip
             if rec[4].strip() == "NIL": continue
             # Else prse
-            print synopmessage(rec)
-            self._data.append(synopmessage(rec))
+            tmp = synopmessage(rec, verbose)
+            if verbose: print(tmp)
+            self._data.append(tmp)
 
+
+    def __call__(self):
+        """
+        Standard call simply returns the list of "synopmessage" objects.
+        """
+
+        return self._data
 
 
 # -------------------------------------------------------------------
@@ -250,21 +264,23 @@ class synopmessage():
     # 16-23 date
     # 24-27 time
     # 42-46 message type code
-    regex = re.compile("^([0-9\/]{5})\s([0-9\/]{5})(\s00.{3})?(\s1.{4})?(\s2.{4})?" + \
-            "(\s3.{4})?(\s4.{4})?(\s5.{4})?(\s6.{4})?(\s7.[4])?(\s8.{4})?(\s9.{4})?" + \
-            "(\s333\s.*)?(?=\s[0-9]{3}\s)?.*?$", re.M) 
+    regex = re.compile("^(\S{5})\s(\S{5})(\s00\S{3})?(\s1\S{4})?(\s2\S{4})?" + \
+            "(\s3\S{4})?(\s4\S{4})?(\s5\S{4})?(\s6\S{4})?(\s7\S{4})?(\s8\S{4})?" + \
+            "(\s9\S{4})?(\s333\s.*)?(?=\s[0-9]{3}\s)?.*?$", re.M) 
 
     # Regex expression to parse data from the clim block "333"
     # 0.... 1sTTT 2sTTT 3EsTT 4E'sss 55SSS 2FFFF 3FFFF 4FFFF 553SS 2FFFF 3FFFF 4FFFF 6RRRt 7RRRR 8NChh 9SSss 
-    rd   = "(\s0.{4})?(\s1.{4})?(\s2.{4})?(\s3.{4})?(\s4.{4})?(\s55.{3})?(\s2.{4})?(\s3.{4})?(\s4.{4})?(\s553.{2})?(\s2.{4})?(\s3.{4})?(\s4.{4})?(\s6.{4})?(\s7.{4})?"
+    rd   = "(\s0\S{4})?(\s1\S{4})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?" + \
+           "(\s55\S{3})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s553\S{2})?" + \
+           "(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s6\S{4})?(\s7\S{4})?"
     rd89 = "(\s[89].*)?"
     regex333 = re.compile("^333" + rd + rd89 + "(?=\s[0-9]{3}\s)?.*?$")
 
     # Parsing 8/9 blocks
     regex89 = re.compile("([89].{4}\s?)")
 
-    def __init__(self, x):
-        """synopmessage(x)
+    def __init__(self, x, verbose = False):
+        """synopmessage(x, verbose = False)
 
         Creates a small object containing all the information from one
         synop message.
@@ -273,12 +289,19 @@ class synopmessage():
         ----------
         x : tuple
             the tuple as returned by regex.findall(...) in get_synop_messages!
+        verbose : bool
+            default False, if set to True each message will create some
+            output on stdout. Development feature.
         """
 
         if not isinstance(x, tuple):
             raise ValueError("wrong input type")
         if not len(x) == 5:
             raise ValueError("something wrong with input (length wrong)")
+
+        if verbose:
+            print("---------------------- (MSG)")
+            print(x[4])
 
         import datetime as dt
         self._station   = int(x[0])
@@ -315,6 +338,27 @@ class synopmessage():
 
         return res
 
+    def get_tuple(self, params):
+        """get_tuple(param)
+
+        Used to create the tuples for the database.
+
+        Parameter
+        ---------
+        param : str or list of str
+            string or list of strings, parameter names which should be
+            returned as a tuple. Note that attributes which are not set
+            will be handled as None.
+        """
+
+        if isinstance(params, str): params = [params]
+        if not isinstance(params, list):
+            raise ValueError("wrong input, requires str or list of str.")
+
+        tmp = []
+        for p in params: tmp.append(self.get(p))
+        return tuple(tmp)
+
     def _decode_message(self, message):
         """_decode_messages(message)
 
@@ -337,7 +381,6 @@ class synopmessage():
         funs = ["iihVV", "Nddff", "00fff", "1sTTT", "2sTTT", "3PPPP",
                 "4PPPP", "5appp", "6RRRt", "7wwWW", "8NCCC", "9GGgg","333"]
 
-        if len(x) == 0: return
         for i in range(0, len(funs)):
             fun = getattr(self, "_decode_{:s}".format(funs[i]))
             fun(tmp[i])
@@ -354,7 +397,10 @@ class synopmessage():
 
     # ----------------------
     def _decode_iihVV(self, x):
-        self._ir = self._ix = self._h = self._vv = None
+        self._ir = None
+        self._ix = None
+        self._h  = None
+        self._vv = None
         if len(x) == 0: return
         # Else decode
         self._ir = int(x[0])
@@ -364,7 +410,9 @@ class synopmessage():
 
     # ----------------------
     def _decode_Nddff(self, x):
-        self._N = self._dd = self._ff = None
+        self._N  = None
+        self._dd = None
+        self._ff = None
         if len(x) == 0: return
         self._N   = None if x[0] == "/" else int(x[0])
         if not x[1:3] == "//":
@@ -390,7 +438,8 @@ class synopmessage():
 
     # ----------------------
     def _decode_2sTTT(self, x): 
-        self._rh = self._Td = None
+        self._rh = None
+        self._Td = None
         if len(x) == 0: return
         # In this case we do have relative humidity
         # and not dewpoint temperature.
@@ -424,7 +473,8 @@ class synopmessage():
 
     # ----------------------
     def _decode_5appp(self, x): 
-        self._ptend = self._pch = None
+        self._ptend = None
+        self._pch   = None
         if len(x) == 0: return
         self._ptend = int(x[1])
         self._pch   = int(x[2:])
@@ -475,16 +525,20 @@ class synopmessage():
 
     # ----------------------
     def _decode_7wwWW(self, x): 
-        self._ww = self._W1 = self._W2 = None
+        self._ww = None
+        self._W1 = None
+        self._W2 = None
         if len(x) == 0: return
         if not x[1:3] == "//": self._ww = int(x[1:3])
-        if not x[3] == "//":   self._W1 = int(x[3])
-        if not x[4] == "//":   self._W1 = int(x[4])
-
+        if not x[3] == "/":   self._W1 = int(x[3])
+        if not x[4] == "/":   self._W2 = int(x[4])
 
     # ----------------------
     def _decode_8NCCC(self, x): 
-        self._nh = self._cl = self._cm = self._ch = None
+        self._nh = None
+        self._cl = None
+        self._cm = None
+        self._ch = None
         if len(x) == 0: return
         if not x[1] == "/": self._nh = int(x[1])
         if not x[2] == "/": self._cl = int(x[2])
@@ -524,21 +578,30 @@ class synopmessage():
 
     # ----------------------
     def _decode_333_1sTTT(self, x):
-        self._Tmax = None
+        self._Tmax12 = None
         if len(x) == 0: return
-        self._Tmax = int(x[2:])
-        if int(x[1]) == 1: self._Tmax = -self._Tmax
+        self._Tmax12 = int(x[2:])
+        if int(x[1]) == 1: self._Tmax12 = -self._Tmax12
 
     # ----------------------
     def _decode_333_2sTTT(self, x):
-        self._Tmin = None
+        self._Tmin12 = None
+        self._Tmin15 = None
         if len(x) == 0: return
-        self._Tmin = int(x[2:])
-        if int(x[1]) == 1: self._Tmin = -self._Tmin
+        t = int(x[2:])
+        if int(x[1]) == 1: t = -t
+
+        # Checking time
+        hour = int(self.get("datetime").strftime("%H"))
+        if hour == 9:
+            self._Tmin15 = t
+        else:
+            self._Tmin12 = t
 
     # ----------------------
     def _decode_333_3EsTT(self, x):
-        self._E = self._T5cm = None
+        self._E    = None
+        self._T5cm = None
         if len(x) == 0: return
         if not x[1] == "/": self._E = int(x[1])
         if not x[3:] == "//":
@@ -547,7 +610,8 @@ class synopmessage():
 
     # ----------------------
     def _decode_333_4Esss(self, x):
-        self._Eschnee = self._snh = None
+        self._Eschnee = None
+        self._snh     = None
         if len(x) == 0: return
         # Schneehoehe in cm (997 = < 0.5 cm,
         # 998 = Flecken oder Reste, 999 = Angabe nicht moeglich)
@@ -559,7 +623,8 @@ class synopmessage():
         self._sunday = None
         if len(x) == 0: return
         # Convert to minutes (what's delivered by BUFR)
-        self._sunday = int(x[2:]) / 10 * 60
+        if not x[2:] == "///":
+            self._sunday = int(x[2:]) / 10 * 60
 
     # ----------------------
     def _decode_333_2FFFF(self, x):
@@ -596,7 +661,8 @@ class synopmessage():
 
     # ----------------------
     def _decode_333_89blocks(self, x):
-        self._ffx = self._ffinst = None
+        self._ffx    = None
+        self._ffinst = None
         if len(x) == 0: return
         tmp = self.regex89.findall(x)
         if len(tmp[0]) == 0: return
@@ -638,6 +704,28 @@ class synopmessage():
             return getattr(self, "_{:s}".format(key))
 
 
+
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+def show_tab(colnames, data, n = None):
+
+    for c in colnames:
+        if c == "datumsec":
+            print("{:12s} ".format(c)),
+        else:
+            print("{:6s} ".format(c)),
+    print ""
+    if n is None: n = len(data)
+    for i in range(0, n):
+        for j in range(0, len(data[i])):
+            if colnames[j] == "datumsec":
+                print("{:12d} ".format(data[i][j])),
+            else:
+                print("{:6s} ".format(str(data[i][j]))),
+        print ""
+
+
+
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
 if __name__ == "__main__":
@@ -647,6 +735,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download some IHD observation data")
     parser.add_argument("--station", "-s", type = int, default = 11120,
                help = "Number of the station to be processes.")
+    parser.add_argument("--testfile", type = str, default = None,
+               help = "Process this one test file (development).")
     parser.add_argument("--devel", default = False, action = "store_true",
                help = "Used for development. If set, the script reads config_devel.conf" + \
                       " instead of config.conf.")
@@ -665,6 +755,11 @@ if __name__ == "__main__":
             os.makedirs(config.get("isddir"))
         except Exception as e:
             raise Exception(e)
+
+    if args["testfile"]:
+        print("Reading {:s}".format(args["testfile"]))
+        messages = get_synop_messages(args["testfile"])
+        sys.exit(" --- development stop (--testfile) ---- ")
 
     # The year ...
     for year in range(2016, int(dt.date.today().strftime("%Y")) + 1):
@@ -708,81 +803,42 @@ if __name__ == "__main__":
                     # If we overstressed ogimet: do not save, sleep 1 minute,
                     # and try again.
                     if re.match("Status: 501 Sorry", content[0]):
-                        print("Hoppala, overstressed ogimet ... sleep 60 seconds and retry")
+                        print("    Hoppala, overstressed ogimet ... sleep 60 seconds and retry")
                         time.sleep(60)
                     else: 
                         fid = open(synfile, "w")
                         fid.write("".join(content))
                         fid.close()
+                        print("    Just being nice to ogimet, sleep 30 seconds ...")
+                        time.sleep(30)
 
                         break;
     
             print("Reading {:s}".format(synfile))
-            
-            messages = get_synop_messages(synfile)
+            messages = get_synop_messages(synfile, verbose = False)
     
-            continue
-            
-            # --------------------------------
-            # Step (1) Extracting the table with the data
-            table = re.findall("(<TABLE[^>*]+>[^<*]<CAPTION>\s+Decoded.*(?=(</TABLE>)))", content, re.S)
-            if not table:
-                raise Exception("Problems to find the table!")
-            if len(table) > 1:
-                raise Exception("whoops, found multiple tables")
-            table = "".join(list(table[0]))
-            
-            
-            # --------------------------------
-            # Step (2) Extract and rename column names.
-            colnames = get_column_names(table)
-    
-            # Rename some of the column names
-            colnames = rename_colnames(colnames)
-        
-            # --------------------------------
-            # Step (3) Reading data
-            rows = re.findall("<tr>(.*?)</tr>", table, re.S)
-            
-            if len(rows) == 0:
-                raise Exception("no rows found")
-            
+
+
+            # For database: generate a column vector and fetch data
+            colnames = ["datumsec", "T", "Td", "Tmin12", "Tmax12",
+                        "dd", "ff", "ffx", "ffinst",
+                        "rr6", "rr12", "rr24",
+                        "ww", "W1", "W2", "sun", "sunday"]
             data = []
-            for row in rows: data.append(get_data_from_row(row))
-            for rec in data:
-                if not len(rec) == len(colnames):
-                    print("mismatch between column names and data\n")
-                    print(colnames), "\n"
-                    print(rec),"\n"
-                    sys.exit(9)
-        
-            # --------------------------------
-            # Step (4) Decode rain
-            colnames, data = decode_rain(colnames, data)
-        
-            # --------------------------------
-            # Step (5) Decode dd
-            colnames, data = decode_dd(colnames, data)
-        
-            # --------------------------------
-            # Step (5) Decode ww
-            colnames, data = decode_w1w2(colnames, data)
-            colnames, data = decode_ww(colnames, data)
-            #colnames, data = kill_ww(colnames, data)
-        
-            # --------------------------------
-            # Step (6) datetime to integer
-            colnames, data = convert_datetime(colnames, data)
-            
+            for rec in messages():
+                data.append(rec.get_tuple(colnames))
+
+
+            # Development output
+            show_tab(colnames, data, n = 5)
+
+
             # Define and open sqlite3 database
             sql3file = "obs_{:d}.sqlite3".format(args["station"])
             db = obs_db(config.get("sqlite3dir"), sql3file, colnames)
     
             db.write(colnames, data)
         
-            # --------------------------------
-            ##show_tab(colnames, data, n = 5)
-
 
 
 
