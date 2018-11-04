@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 20:06 on marvin
+# - L@ST MODIFIED: 2018-11-04 20:44 on marvin
 # -------------------------------------------------------------------
 
 
@@ -483,7 +483,7 @@ class synopmessage():
         self._pch   = None
         if len(x) == 0: return
         # Empty message
-        if x[1:] == "////": return
+        if x[1] == "/": return
         # Else extract information
         self._ptend = int(x[1])
         if not x[2:] == "///":

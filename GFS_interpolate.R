@@ -47,6 +47,7 @@ ipfun <- function(file, stations, rdsdir = "rds") {
 }
 
 library("parallel")
+library("zoo")
 x <- mclapply(ncfiles, FUN = ipfun, stations = stations, mc.cores = 3)
 
 testfun <- function(x, param, stn = "C.11120") {
@@ -70,20 +71,54 @@ testplot <- function(x, params) {
         for ( i in seq_along(test) ) lines(test[[i]], col = cols[i])
     }
 }
-testplot(x, sample(names(x[[1]][[1]]), 5))
+#testplot(x, sample(names(x[[1]][[1]]), 5))
 
 
 
-stop("--- devel stop ---")
 
-x <- nc_bilinear_on_file(file, stations)
-
-makezoo <- function(x) {
-    x <- reshape(x, timevar = "shortName", idvar = "datetime", direction = "wide")
-    names(x) <- gsub("^value\\.", "", names(x))
-    x <- zoo(x[,-1], x[,1])
-    invisible(x)
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+data <- list()
+unique_stations <- function(x) {
+    x <- as.character(x$statnr)
+    return(unique(as.integer(regmatches(x, regexpr("[0-9]+$", x)))))
+}
+unique_stations <- unique_stations(stations)
+for ( stn in stations$statnr ) {
+    tmp <- lapply(x, function(x, stn) do.call(merge, x[grep(sprintf("%d$", stn), names(x))] ), stn = stn)
 }
 
-x <- makezoo(x[[1]])
+
+load_all("mospack")
+d <- mospack::computeDerivedVars(tmp[[1]]) #x[[1]])
+d <- d[,grepl("^C\\.", names(d))]
+names(d)[which(apply(d, 2, function(x) sum(!is.na(x))) == 0)]
+
+#par(ask = TRUE)
+#n <- 21
+#for ( i in seq(1, ncol(d), by = n + 1) ) {
+#    idx <- seq(i, min(ncol(d), i+n))
+#    plot(d[,idx], ncol = 1)
+#}
+idx <- grep("C.ffshear", names(d))
+plot(d[,idx], screen = 1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

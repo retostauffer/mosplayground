@@ -7,31 +7,32 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-02-24, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 18:54 on marvin
+# - L@ST MODIFIED: 2018-11-04 21:02 on marvin
 # -------------------------------------------------------------------
 
-# Function to get a vector of accumulated variables
-accumulated <- function( model ) {
-
-    # Loading the data set
-    data( "accumulatedVariables", package = "mospack" )
-    # Take subset
-    x <- accumulatedVariables[ grep(sprintf("^%s$",model),
-                   accumulatedVariables$model, ignore.case = TRUE ), ]
-    # If no accumulted variables defined: return NULL
-    if ( nrow(x) == 0 ) return( NULL )
-    # Else return a character vector of the shortNames specified
-    # in the data set.
-    gsub(" ","",as.character( x$shortName ))
-
-}
+### Function to get a vector of accumulated variables
+##accumulated <- function( model ) {
+##
+##    # Loading the data set
+##    data( "accumulatedVariables", package = "mospack" )
+##    # Take subset
+##    x <- accumulatedVariables[ grep(sprintf("^%s$",model),
+##                   accumulatedVariables$model, ignore.case = TRUE ), ]
+##    # If no accumulted variables defined: return NULL
+##    if ( nrow(x) == 0 ) return( NULL )
+##    # Else return a character vector of the shortNames specified
+##    # in the data set.
+##    gsub(" ","",as.character( x$shortName ))
+##
+##}
 
 
 # Compute derived variables
 computeDerivedVars <- function(x) {
+    print('fadfadf')
 
     stations <- unique(gsub("\\.","",regmatches(names(x),regexpr("[a-zA-Z]+\\.",names(x)))))
-    data( "derivedVars", package = "mospack" )
+    data("derivedVars", package = "mospack")
     for ( stn in stations ) {
         for ( i in 1:nrow(derivedVars) ) {
             cmd <- gsub( "<s>", sprintf("x$%s",stn), derivedVars$equation[i] )
@@ -250,111 +251,6 @@ prepareGFS <- function(station, neighbours = NULL,
     # Return this data.frame
     return( raw )
 
-}
-
-# -------------------------------------------------------------------
-# - NAME:        prepare.R
-# - AUTHOR:      Reto Stauffer
-# - DATE:        2018-02-24
-# -------------------------------------------------------------------
-# - DESCRIPTION:
-# -------------------------------------------------------------------
-# - EDITORIAL:   2018-02-24, RS: Created file on thinkreto.
-# -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 18:53 on marvin
-# -------------------------------------------------------------------
-
-# Function to get a vector of accumulated variables
-accumulated <- function( model ) {
-
-    # Loading the data set
-    data( "accumulatedVariables", package = "foehnpack" )
-    # Take subset
-    x <- accumulatedVariables[ grep(sprintf("^%s$",model),
-                   accumulatedVariables$model, ignore.case = TRUE ), ]
-    # If no accumulted variables defined: return NULL
-    if ( nrow(x) == 0 ) return( NULL )
-    # Else return a character vector of the shortNames specified
-    # in the data set.
-    gsub(" ","",as.character( x$shortName ))
-
-}
-
-
-# Compute derived variables
-computeDerivedVars <- function(x, ERA5 = FALSE ) {
-
-    stations <- unique(gsub("\\.","",regmatches(names(x),regexpr("[a-zA-Z]+\\.",names(x)))))
-    if ( ! ERA5 ) {
-        data( "derivedVars", package = "foehnpack" )
-    } else {
-        data( "ERA5_derivedVars", package = "foehnpack" )
-        derivedVars <- ERA5_derivedVars
-    }
-    for ( stn in stations ) {
-        for ( i in 1:nrow(derivedVars) ) {
-            cmd <- gsub( "<s>", sprintf("x$%s",stn), derivedVars$equation[i] )
-            try(eval(parse(text = cmd)), silent = TRUE)
-            if ( inherits(check, "try-error") )
-                cat(sprintf("[!DERIV] %s\n", eqn))
-        }
-    }
-
-    return( x )
-
-}
-
-# Compute temporal differences
-computeTemporalDifferences <- function(x, ERA5 = FALSE) {
-
-    if ( ! length(unique(x$init)) == 1 )
-        stop("Different initial dates! Cannot compute temporal differences.")
-
-    data( "temporalcov", package = "foehnpack" )
-    temporalcov$varname <- trimws(as.character(temporalcov$varname))
-    temporalcov$step1   <- as.integer(temporalcov$step1)
-    temporalcov$step2   <- as.integer(temporalcov$step2)
-
-    # Checking stations
-    stations <- unique(gsub("\\.","",regmatches(names(x),regexpr("[a-zA-Z]+\\.",names(x)))))
-    if ( ! ERA5 ) {
-        data( "derivedVars", package = "foehnpack" )
-    } else {
-        data( "ERA5_derivedVars", package = "foehnpack" )
-        derivedVars <- ERA5_derivedVars
-    }
-
-    for ( i in 1:nrow(temporalcov) ) {
-        # Extract step1/step2 (definition) for convenience
-        step1 <- temporalcov$step1[i]
-        step2 <- temporalcov$step2[i]
-
-        for ( stn in stations ) {
-
-            # Variable name
-            varname <- gsub("^<s>",stn,temporalcov$varname[i])
-
-            # Getting column. If not found, skip
-            cidx <- which( names(x) == varname )
-            if ( length(cidx) == 0 ) next
-            # Looking for indizes matching the steps we need to
-            # compute the differences.
-            idx <- cbind( match(x$step + step1,x$step), match(x$step + step2,x$step) ) 
-            # No matchings (due to misspecification) skip
-            if ( all(is.na(idx)) ) next
-
-            # Else compute spatial differences
-            newname <- sprintf("%s_%s%dh%s%dh", varname,
-                        ifelse( sign(step2) < 0, "m", "p" ), abs(step2),
-                        ifelse( sign(step1) < 0, "m", "p" ), abs(step1) )
-
-            eval(parse(text=sprintf("x$%s <- x[idx[,2],cidx] - x[idx[,1],cidx]",newname)))
-
-        }
-
-    }
-
-    return( x )
 }
 
 
