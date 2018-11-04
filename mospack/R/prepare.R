@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-02-24, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 22:00 on marvin
+# - L@ST MODIFIED: 2018-11-04 23:18 on marvin
 # -------------------------------------------------------------------
 
 ### Function to get a vector of accumulated variables
@@ -29,7 +29,6 @@
 
 # Compute derived variables
 computeDerivedVars <- function(x) {
-    print('fadfadf')
 
     stations <- unique(gsub("\\.","",regmatches(names(x),regexpr("[a-zA-Z]+\\.",names(x)))))
     data("derivedVars", package = "mospack")

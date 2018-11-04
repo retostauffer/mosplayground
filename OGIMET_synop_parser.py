@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 20:44 on marvin
+# - L@ST MODIFIED: 2018-11-04 23:17 on marvin
 # -------------------------------------------------------------------
 
 
@@ -470,8 +470,9 @@ class synopmessage():
     def _decode_4PPPP(self, x): 
         self._pmsl = None
         if len(x) == 0: return
-        # If 3PPP/: full hPa
-        if re.match("^3[0-9]{3}/$", x):
+        if x[1:] == "////": return
+        # If 4PPP/: full hPa
+        if re.match("^4[0-9]{3}/$", x):
             self._pmsl = 10 * int(x[1:4])
         else:
             self._pmsl = int(x[1:])

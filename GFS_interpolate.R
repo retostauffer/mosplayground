@@ -17,19 +17,24 @@ stations <- neighbours(stations)
 #text(coordinates(stations)[,1], coordinates(stations)[,2], 
 #     as.character(stations$statnr), col = stations$col)
 
+init_from_filename <- function(x)
+    as.POSIXct(strptime(regmatches(ncfiles, regexpr("[0-9]{8}_[0-9]{4}", ncfiles)), "%Y%m%d_%H%M"))
 
 
 # --------------------------------------------------------------
 # --------------------------------------------------------------
 ncfiles <- list.files("netcdf")
-ncfiles <- sprintf("netcdf/%s", ncfiles[grep("^GFS_[0-9]{8}_[0-9]{2}00_combined.nc$", ncfiles)])
+ncfiles <- sort(sprintf("netcdf/%s", ncfiles[grep("^GFS_[0-9]{8}_[0-9]{2}00_combined.nc$", ncfiles)]))
 # Make named list, nicer for mclapply
-ncfiles <- setNames(ncfiles, regmatches(ncfiles, regexpr("[0-9]{8}_[0-9]{4}", ncfiles)))
+ncfiles <- setNames(ncfiles, strftime(init_from_filename(ncfiles)))
 
 ipfun <- function(file, stations, rdsdir = "rds") {
     if ( ! dir.exists(rdsdir) ) dir.create(rdsdir)
     rdsfile <- sprintf("%s/%s", rdsdir, sub("nc$", "rds", basename(file)))
     if ( file.exists(rdsfile) ) return(readRDS(rdsfile))
+
+    # Initial time
+    init <- as.POSIXct(strptime(regmatches(file, regexpr("[0-9]{8}_[0-9]{4}", file)), "%Y%m%d_%H%M"))
 
     # Else interpolate and save
     x <- nc_bilinear_on_file(file, stations)
@@ -42,71 +47,46 @@ ipfun <- function(file, stations, rdsdir = "rds") {
         x[[i]] <- zoo(tmp[,-1], tmp[,1])
         names(x[[i]]) <- sprintf("%s.%s", nname, gsub("^value.", "", names(x[[i]])))
     }
+
+    # Combine neighbours
+    unique_stations <- function(x) {
+        x <- as.character(x$statnr)
+        return(unique(as.integer(regmatches(x, regexpr("[0-9]+$", x)))))
+    }
+    unique_stations <- unique_stations(stations)
+    x <- lapply(unique_stations, function(stn, x) do.call(merge, x[grep(sprintf("%d$", stn), names(x))] ), x = x)
+    x <- setNames(x, as.character(unique_stations))
+
+    # Compute derived variables
+    x <- lapply(x, mospack::computeDerivedVars)
+
+    # Compute temporal differences
+    x <- lapply(x, computeTemporalDifferences)
+
+    # Append forecast step
+    add_step <- function(x, init)
+        merge(zoo(data.frame(step = as.numeric(index(x) - init, unit = "hours")), index(x)), x)
+    x <- lapply(x, add_step, init = init)
+    
+    # Save and return
     saveRDS(x, file = rdsfile)
     return(x)
 }
 
 library("parallel")
 library("zoo")
-x <- mclapply(ncfiles, FUN = ipfun, stations = stations, mc.cores = 3)
+warning("Taking only first 3 netcdf files here")
+x <- mclapply(ncfiles[1:3], FUN = ipfun, stations = stations, mc.cores = 3)
 
-testfun <- function(x, param, stn = "C.11120") {
-    x <- x[[stn]]
-    if ( ! param %in% names(x) ) stop("cannot find ", param)
-    x[,param]
+
+combine_zoo <- function(stn, x, step) {
+    x <- do.call(rbind, lapply(x, function(x, stn, stp) subset(x[[stn]], step == stp), stn = stn, stp = step))
+    # Delete empty cols
+    idx <- which(colSums(!is.na(x)) == 0)
+    if ( length(idx) > 0 ) x <- x[,-idx]
+    return(x)
 }
-testplot <- function(x, params) {
-    par(mfrow = c(length(params), 1), mar = rep(0, 4), oma = c(1,5,1,1))
-    for ( param in params ) {
-        cat(sprintf(" ---- %s\n", param))
-        test <- lapply(x, testfun, param = param)
-        xlim <- range(sapply(test, function(x) range(index(x))))
-        ylim <- range(sapply(test, function(x) range(x)), na.rm = TRUE)
-
-        plot(NA, xlim = xlim, ylim = ylim, xaxt = "n",
-             xlab = NA, ylab = NA)
-        mtext(side = 2, line = 2, param)
-        library("colorspace")
-        cols <- rainbow_hcl(length(test))
-        for ( i in seq_along(test) ) lines(test[[i]], col = cols[i])
-    }
-}
-#testplot(x, sample(names(x[[1]][[1]]), 5))
-
-
-
-
-# --------------------------------------------------------------
-# --------------------------------------------------------------
-data <- list()
-unique_stations <- function(x) {
-    x <- as.character(x$statnr)
-    return(unique(as.integer(regmatches(x, regexpr("[0-9]+$", x)))))
-}
-unique_stations <- unique_stations(stations)
-for ( stn in unique_stations ) {
-    tmp <- lapply(x, function(x, stn) do.call(merge, x[grep(sprintf("%d$", stn), names(x))] ), stn = stn)
-}
-
-
-load_all("mospack")
-d <- mospack::computeDerivedVars(tmp[[1]]) #x[[1]])
-
-load_all("mospack")
-d2 <- computeTemporalDifferences(d)
-d2 <- d2[,grep("^C\\.", names(d2))]
-print(head(names(d2),100))
-
-
-##par(ask = TRUE)
-##n <- 21
-##for ( i in seq(1, ncol(d), by = n + 1) ) {
-##    idx <- seq(i, min(ncol(d), i+n))
-##    plot(d[,idx], ncol = 1)
-##}
-#idx <- grep("C.ffshear", names(d))
-#plot(d[,idx], screen = 1)
-
+data18 <- lapply(setNames(names(x[[1]]), names(x[[1]])), combine_zoo, x = x, step = 18)
 
 
 
