@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-02-24, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 21:02 on marvin
+# - L@ST MODIFIED: 2018-11-04 22:00 on marvin
 # -------------------------------------------------------------------
 
 ### Function to get a vector of accumulated variables
@@ -47,36 +47,39 @@ computeDerivedVars <- function(x) {
 }
 
 # Compute temporal differences
-computeTemporalDifferences <- function(x, ERA5 = FALSE) {
+computeTemporalDifferences <- function(x) {
 
-    if ( ! length(unique(x$init)) == 1 )
-        stop("Different initial dates! Cannot compute temporal differences.")
+    if ( ! inherits(x, "zoo") ) stop("input has to be of class zoo")
 
-    data( "temporalcov", package = "mospack" )
-    temporalcov$varname <- trimws(as.character(temporalcov$varname))
-    temporalcov$step1   <- as.integer(temporalcov$step1)
-    temporalcov$step2   <- as.integer(temporalcov$step2)
+    data("temporalcovariates", package = "mospack")
+    tcov <- temporalcovariates
+    tcov$varname <- trimws(as.character(tcov$varname))
+    tcov$step1   <- as.integer(tcov$step1)
+    tcov$step2   <- as.integer(tcov$step2)
 
     # Checking stations
     stations <- unique(gsub("\\.","",regmatches(names(x),regexpr("[a-zA-Z]+\\.",names(x)))))
-    data( "derivedVars", package = "mospack" )
+    data("derivedVars", package = "mospack")
 
-    for ( i in 1:nrow(temporalcov) ) {
+    for ( i in 1:nrow(tcov) ) {
+
         # Extract step1/step2 (definition) for convenience
-        step1 <- temporalcov$step1[i]
-        step2 <- temporalcov$step2[i]
+        step1 <- tcov$step1[i]
+        step2 <- tcov$step2[i]
 
         for ( stn in stations ) {
 
             # Variable name
-            varname <- gsub("^<s>",stn,temporalcov$varname[i])
+            varname <- gsub("^<s>", stn, tcov$varname[i])
 
             # Getting column. If not found, skip
-            cidx <- which( names(x) == varname )
+            cidx <- which(names(x) == varname)
             if ( length(cidx) == 0 ) next
+
             # Looking for indizes matching the steps we need to
             # compute the differences.
-            idx <- cbind( match(x$step + step1,x$step), match(x$step + step2,x$step) ) 
+            idx <- cbind(match(index(x) + step2 * 3600, index(x)),
+                         match(index(x) + step1 * 3600, index(x))) 
             # No matchings (due to misspecification) skip
             if ( all(is.na(idx)) ) next
 
@@ -85,7 +88,12 @@ computeTemporalDifferences <- function(x, ERA5 = FALSE) {
                         ifelse( sign(step2) < 0, "m", "p" ), abs(step2),
                         ifelse( sign(step1) < 0, "m", "p" ), abs(step1) )
 
-            eval(parse(text=sprintf("x$%s <- x[idx[,2],cidx] - x[idx[,1],cidx]",newname)))
+            # As we have a zoo we have to take care of the indizes
+            eval(parse(text=sprintf("x$%s <- NA", newname)))
+            naidx  <- which(rowSums(is.na(idx)) == 0)
+            idx    <- na.omit(idx)
+            tmp    <- as.numeric(x[idx[,1], cidx]) - as.numeric(x[idx[,2], cidx])
+            eval(parse(text=paste(sprintf("x$%s[naidx] <- tmp", newname))))
 
         }
 

@@ -84,24 +84,28 @@ unique_stations <- function(x) {
     return(unique(as.integer(regmatches(x, regexpr("[0-9]+$", x)))))
 }
 unique_stations <- unique_stations(stations)
-for ( stn in stations$statnr ) {
+for ( stn in unique_stations ) {
     tmp <- lapply(x, function(x, stn) do.call(merge, x[grep(sprintf("%d$", stn), names(x))] ), stn = stn)
 }
 
 
 load_all("mospack")
 d <- mospack::computeDerivedVars(tmp[[1]]) #x[[1]])
-d <- d[,grepl("^C\\.", names(d))]
-names(d)[which(apply(d, 2, function(x) sum(!is.na(x))) == 0)]
 
-#par(ask = TRUE)
-#n <- 21
-#for ( i in seq(1, ncol(d), by = n + 1) ) {
-#    idx <- seq(i, min(ncol(d), i+n))
-#    plot(d[,idx], ncol = 1)
-#}
-idx <- grep("C.ffshear", names(d))
-plot(d[,idx], screen = 1)
+load_all("mospack")
+d2 <- computeTemporalDifferences(d)
+d2 <- d2[,grep("^C\\.", names(d2))]
+print(head(names(d2),100))
+
+
+##par(ask = TRUE)
+##n <- 21
+##for ( i in seq(1, ncol(d), by = n + 1) ) {
+##    idx <- seq(i, min(ncol(d), i+n))
+##    plot(d[,idx], ncol = 1)
+##}
+#idx <- grep("C.ffshear", names(d))
+#plot(d[,idx], screen = 1)
 
 
 
