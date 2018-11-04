@@ -1,0 +1,189 @@
+# -------------------------------------------------------------------
+# File used to compute spatial covariates.
+# This file contains the equation (R syntax). Each equation will be evaluated
+# inside the package.
+# The data.frame on which the operationls will be performed is 'x', so
+# x$<name> have to be used to address the different covariates.
+# There are always 9 points
+# x$C.<name>:         center grid point, target
+# x$<gp>.<name>:      gp have specific names and are the neighbour
+#                     grid points in the data set for the foenpack.
+#
+#                  NN
+#            NW    |    NE
+#              \   N   /
+#               \  |  /
+#                \ | /
+#                  C 
+#                / | \
+#               /  |  \
+#              /   S   \
+#            SW    |    SE
+#                  SS
+#
+# See "neighbours()" function to get more details.
+# -------------------------------------------------------------------
+equation
+# Surface pressure differences
+x$diffmsl_CN     <- x$C.msl   - x$N.msl
+x$diffmsl_SC     <- x$S.msl   - x$C.msl
+x$diffmsl_SN     <- x$S.msl   - x$N.msl 
+x$diffmsl_SSNN   <- x$SS.msl  - x$NN.msl 
+x$diffmsl_SSC    <- x$SS.msl  - x$C.msl
+x$diffmsl_CNN    <- x$C.msl   - x$NN.msl
+x$diffmsl_SWNE   <- x$SW.msl  - x$NE.msl
+x$diffmsl_SENW   <- x$SE.msl  - x$NE.msl
+# Potential temperature differences 700 hPa
+x$difftheta700_CN     <- x$C.theta700   - x$N.theta700
+x$difftheta700_SC     <- x$S.theta700   - x$C.theta700
+x$difftheta700_SN     <- x$S.theta700   - x$N.theta700 
+x$difftheta700_SSNN   <- x$SS.theta700  - x$NN.theta700 
+x$difftheta700_SSC    <- x$SS.theta700  - x$C.theta700
+x$difftheta700_CNN    <- x$C.theta700   - x$NN.theta700
+x$difftheta700_SWNE   <- x$SW.theta700  - x$NE.theta700
+x$difftheta700_SENW   <- x$SE.theta700  - x$NE.theta700
+# Potential temperature differences 850 hPa
+x$difftheta850_CN     <- x$C.theta850   - x$N.theta850
+x$difftheta850_SC     <- x$S.theta850   - x$C.theta850
+x$difftheta850_SN     <- x$S.theta850   - x$N.theta850 
+x$difftheta850_SSNN   <- x$SS.theta850  - x$NN.theta850 
+x$difftheta850_SSC    <- x$SS.theta850  - x$C.theta850
+x$difftheta850_CNN    <- x$C.theta850   - x$NN.theta850
+x$difftheta850_SWNE   <- x$SW.theta850  - x$NE.theta850
+x$difftheta850_SENW   <- x$SE.theta850  - x$NE.theta850
+# Potential temperature differences 925 hPa
+x$difftheta925_CN     <- x$C.theta925   - x$N.theta925
+x$difftheta925_SC     <- x$S.theta925   - x$C.theta925
+x$difftheta925_SN     <- x$S.theta925   - x$N.theta925 
+x$difftheta925_SSNN   <- x$SS.theta925  - x$NN.theta925 
+x$difftheta925_SSC    <- x$SS.theta925  - x$C.theta925
+x$difftheta925_CNN    <- x$C.theta925   - x$NN.theta925
+x$difftheta925_SWNE   <- x$SW.theta925  - x$NE.theta925
+x$difftheta925_SENW   <- x$SE.theta925  - x$NE.theta925
+# Potential tempeture difference differences
+# Difference of the vertical difference 700_850 hPa
+x$difftheta700_850_CN     <- x$C.theta700_850   - x$N.theta700_850
+x$difftheta700_850_SC     <- x$S.theta700_850   - x$C.theta700_850
+x$difftheta700_850_SN     <- x$S.theta700_850   - x$N.theta700_850 
+x$difftheta700_850_SSNN   <- x$SS.theta700_850  - x$NN.theta700_850 
+x$difftheta700_850_SSC    <- x$SS.theta700_850  - x$C.theta700_850
+x$difftheta700_850_CNN    <- x$C.theta700_850   - x$NN.theta700_850
+x$difftheta700_850_SWNE   <- x$SW.theta700_850  - x$NE.theta700_850
+x$difftheta700_850_SENW   <- x$SE.theta700_850  - x$NE.theta700_850
+# Potential tempeture difference differences
+# Difference of the vertical difference 500_850 hPa
+x$difftheta500_850_CN     <- x$C.theta500_850   - x$N.theta500_850
+x$difftheta500_850_SC     <- x$S.theta500_850   - x$C.theta500_850
+x$difftheta500_850_SN     <- x$S.theta500_850   - x$N.theta500_850 
+x$difftheta500_850_SSNN   <- x$SS.theta500_850  - x$NN.theta500_850 
+x$difftheta500_850_SSC    <- x$SS.theta500_850  - x$C.theta500_850
+x$difftheta500_850_CNN    <- x$C.theta500_850   - x$NN.theta500_850
+x$difftheta500_850_SWNE   <- x$SW.theta500_850  - x$NE.theta500_850
+x$difftheta500_850_SENW   <- x$SE.theta500_850  - x$NE.theta500_850
+
+
+
+# Sum of rain south and north
+# [q] will be replaced by quotation marks "
+x$tpsum_south             <- rowSums( x[,grep([q]^S.*\\.tp$[q],names(x))] )
+x$tpsum_north             <- rowSums( x[,grep([q]^N.*\\.tp$[q],names(x))] )
+x$difftpsum_SN            <- x$tpsum_south - x$tpsum_north
+# Mean cloud cover
+x$tccmean_south           <- rowMeans( x[,grep([q]^S.*\\.tcc$[q],names(x))] )
+x$hccmean_south           <- rowMeans( x[,grep([q]^S.*\\.hcc$[q],names(x))] )
+x$mccmean_south           <- rowMeans( x[,grep([q]^S.*\\.mcc$[q],names(x))] )
+x$lccmean_south           <- rowMeans( x[,grep([q]^S.*\\.lcc$[q],names(x))] )
+x$tccmean_north           <- rowMeans( x[,grep([q]^N.*\\.tcc$[q],names(x))] )
+x$hccmean_north           <- rowMeans( x[,grep([q]^N.*\\.hcc$[q],names(x))] )
+x$mccmean_north           <- rowMeans( x[,grep([q]^N.*\\.mcc$[q],names(x))] )
+x$lccmean_north           <- rowMeans( x[,grep([q]^N.*\\.lcc$[q],names(x))] )
+x$difftccmean_SN          <- x$tccmean_south - x$tccmean_north
+x$diffhccmean_SN          <- x$hccmean_south - x$hccmean_north
+x$diffmccmean_SN          <- x$mccmean_south - x$mccmean_north
+x$difflccmean_SN          <- x$lccmean_south - x$lccmean_north
+
+# Cloud temporal difference means for temporal difference p0hm3h
+x$tccp0hm3hmean_south           <- rowMeans( x[,grep([q]^S.*\\.tcc_p0hm3h$[q],names(x))] )
+x$hccp0hm3hmean_south           <- rowMeans( x[,grep([q]^S.*\\.hcc_p0hm3h$[q],names(x))] )
+x$mccp0hm3hmean_south           <- rowMeans( x[,grep([q]^S.*\\.mcc_p0hm3h$[q],names(x))] )
+x$lccp0hm3hmean_south           <- rowMeans( x[,grep([q]^S.*\\.lcc_p0hm3h$[q],names(x))] )
+x$tccp0hm3hmean_north           <- rowMeans( x[,grep([q]^N.*\\.tcc_p0hm3h$[q],names(x))] )
+x$hccp0hm3hmean_north           <- rowMeans( x[,grep([q]^N.*\\.hcc_p0hm3h$[q],names(x))] )
+x$mccp0hm3hmean_north           <- rowMeans( x[,grep([q]^N.*\\.mcc_p0hm3h$[q],names(x))] )
+x$lccp0hm3hmean_north           <- rowMeans( x[,grep([q]^N.*\\.lcc_p0hm3h$[q],names(x))] )
+
+# Cloud temporal difference means for temporal difference p3hm3h
+x$tccp3hm3hmean_south           <- rowMeans( x[,grep([q]^S.*\\.tcc_p3hm3h$[q],names(x))] )
+x$hccp3hm3hmean_south           <- rowMeans( x[,grep([q]^S.*\\.hcc_p3hm3h$[q],names(x))] )
+x$mccp3hm3hmean_south           <- rowMeans( x[,grep([q]^S.*\\.mcc_p3hm3h$[q],names(x))] )
+x$lccp3hm3hmean_south           <- rowMeans( x[,grep([q]^S.*\\.lcc_p3hm3h$[q],names(x))] )
+x$tccp3hm3hmean_north           <- rowMeans( x[,grep([q]^N.*\\.tcc_p3hm3h$[q],names(x))] )
+x$hccp3hm3hmean_north           <- rowMeans( x[,grep([q]^N.*\\.hcc_p3hm3h$[q],names(x))] )
+x$mccp3hm3hmean_north           <- rowMeans( x[,grep([q]^N.*\\.mcc_p3hm3h$[q],names(x))] )
+x$lccp3hm3hmean_north           <- rowMeans( x[,grep([q]^N.*\\.lcc_p3hm3h$[q],names(x))] )
+
+# Cloud temporal difference means for temporal difference p3hp0h
+x$tccp3hp0hmean_south           <- rowMeans( x[,grep([q]^S.*\\.tcc_p3hp0h$[q],names(x))] )
+x$hccp3hp0hmean_south           <- rowMeans( x[,grep([q]^S.*\\.hcc_p3hp0h$[q],names(x))] )
+x$mccp3hp0hmean_south           <- rowMeans( x[,grep([q]^S.*\\.mcc_p3hp0h$[q],names(x))] )
+x$lccp3hp0hmean_south           <- rowMeans( x[,grep([q]^S.*\\.lcc_p3hp0h$[q],names(x))] )
+x$tccp3hp0hmean_north           <- rowMeans( x[,grep([q]^N.*\\.tcc_p3hp0h$[q],names(x))] )
+x$hccp3hp0hmean_north           <- rowMeans( x[,grep([q]^N.*\\.hcc_p3hp0h$[q],names(x))] )
+x$mccp3hp0hmean_north           <- rowMeans( x[,grep([q]^N.*\\.mcc_p3hp0h$[q],names(x))] )
+x$lccp3hp0hmean_north           <- rowMeans( x[,grep([q]^N.*\\.lcc_p3hp0h$[q],names(x))] )
+
+# Spatial differences of temporal differenses
+x$diffmsl_p0hm3h_SC              <- x$S.msl_p0hm3h            - x$C.msl_p0hm3h
+x$diffmsl_p0hm3h_SENW            <- x$SE.msl_p0hm3h           - x$NW.msl_p0hm3h
+x$diffmsl_p0hm3h_SN              <- x$S.msl_p0hm3h            - x$N.msl_p0hm3h
+x$difftheta500_850_p0hm3h_SC     <- x$S.theta500_850_p0hm3h   - x$C.theta500_850_p0hm3h
+x$difftheta500_850_p0hm3h_SENW   <- x$SE.theta500_850_p0hm3h  - x$NW.theta500_850_p0hm3h
+x$difftheta500_850_p0hm3h_SN     <- x$S.theta500_850_p0hm3h   - x$N.theta500_850_p0hm3h
+x$difftheta700_850_p0hm3h_SENW   <- x$SE.theta700_850_p0hm3h  - x$NW.theta700_850_p0hm3h
+x$difftheta850_p0hm3h_SC         <- x$S.theta850_p0hm3h       - x$C.theta850_p0hm3h
+x$difftheta850_p0hm3h_SENW       <- x$SE.theta850_p0hm3h      - x$NW.theta850_p0hm3h
+x$difftheta850_p0hm3h_SN         <- x$S.theta850_p0hm3h       - x$N.theta850_p0hm3h
+x$difftheta850_p0hm3h_SWNE       <- x$SW.theta850_p0hm3h      - x$NE.theta850_p0hm3h
+x$difftheta925_p0hm3h_SN         <- x$S.theta925_p0hm3h       - x$N.theta925_p0hm3h
+x$difftccmean_p0hm3h_SN          <- x$tccp0hm3hmean_south     - x$tccp0hm3hmean_north
+x$diffhccmean_p0hm3h_SN          <- x$tccp0hm3hmean_south     - x$tccp0hm3hmean_north
+x$diffmccmean_p0hm3h_SN          <- x$tccp0hm3hmean_south     - x$tccp0hm3hmean_north
+x$difflccmean_p0hm3h_SN          <- x$tccp0hm3hmean_south     - x$tccp0hm3hmean_north
+
+# Spatial differences of temporal differenses
+x$diffmsl_p3hp0h_SC              <- x$S.msl_p3hp0h            - x$C.msl_p3hp0h
+x$diffmsl_p3hp0h_SENW            <- x$SE.msl_p3hp0h           - x$NW.msl_p3hp0h
+x$diffmsl_p3hp0h_SN              <- x$S.msl_p3hp0h            - x$N.msl_p3hp0h
+x$difftheta500_850_p3hp0h_SC     <- x$S.theta500_850_p3hp0h   - x$C.theta500_850_p3hp0h
+x$difftheta500_850_p3hp0h_SENW   <- x$SE.theta500_850_p3hp0h  - x$NW.theta500_850_p3hp0h
+x$difftheta500_850_p3hp0h_SN     <- x$S.theta500_850_p3hp0h   - x$N.theta500_850_p3hp0h
+x$difftheta700_850_p3hp0h_SENW   <- x$SE.theta700_850_p3hp0h  - x$NW.theta700_850_p3hp0h
+x$difftheta850_p3hp0h_SC         <- x$S.theta850_p3hp0h       - x$C.theta850_p3hp0h
+x$difftheta850_p3hp0h_SENW       <- x$SE.theta850_p3hp0h      - x$NW.theta850_p3hp0h
+x$difftheta850_p3hp0h_SN         <- x$S.theta850_p3hp0h       - x$N.theta850_p3hp0h
+x$difftheta850_p3hp0h_SWNE       <- x$SW.theta850_p3hp0h      - x$NE.theta850_p3hp0h
+x$difftheta925_p3hp0h_SN         <- x$S.theta925_p3hp0h       - x$N.theta925_p3hp0h
+x$difftccmean_p3hp0h_SN          <- x$tccp3hp0hmean_south     - x$tccp3hp0hmean_north
+x$diffhccmean_p3hp0h_SN          <- x$tccp3hp0hmean_south     - x$tccp3hp0hmean_north
+x$diffmccmean_p3hp0h_SN          <- x$tccp3hp0hmean_south     - x$tccp3hp0hmean_north
+x$difflccmean_p3hp0h_SN          <- x$tccp3hp0hmean_south     - x$tccp3hp0hmean_north
+
+# Spatial differences of temporal differenses
+x$diffmsl_p3hm3h_SC              <- x$S.msl_p3hm3h            - x$C.msl_p3hm3h
+x$diffmsl_p3hm3h_SENW            <- x$SE.msl_p3hm3h           - x$NW.msl_p3hm3h
+x$diffmsl_p3hm3h_SN              <- x$S.msl_p3hm3h            - x$N.msl_p3hm3h
+x$difftheta500_850_p3hm3h_SC     <- x$S.theta500_850_p3hm3h   - x$C.theta500_850_p3hm3h
+x$difftheta500_850_p3hm3h_SENW   <- x$SE.theta500_850_p3hm3h  - x$NW.theta500_850_p3hm3h
+x$difftheta500_850_p3hm3h_SN     <- x$S.theta500_850_p3hm3h   - x$N.theta500_850_p3hm3h
+x$difftheta700_850_p3hm3h_SENW   <- x$SE.theta700_850_p3hm3h  - x$NW.theta700_850_p3hm3h
+x$difftheta850_p3hm3h_SC         <- x$S.theta850_p3hm3h       - x$C.theta850_p3hm3h
+x$difftheta850_p3hm3h_SENW       <- x$SE.theta850_p3hm3h      - x$NW.theta850_p3hm3h
+x$difftheta850_p3hm3h_SN         <- x$S.theta850_p3hm3h       - x$N.theta850_p3hm3h
+x$difftheta850_p3hm3h_SWNE       <- x$SW.theta850_p3hm3h      - x$NE.theta850_p3hm3h
+x$difftheta925_p3hm3h_SN         <- x$S.theta925_p3hm3h       - x$N.theta925_p3hm3h
+x$difftccmean_p3hm3h_SN          <- x$tccp3hm3hmean_south     - x$tccp3hm3hmean_north
+x$diffhccmean_p3hm3h_SN          <- x$tccp3hm3hmean_south     - x$tccp3hm3hmean_north
+x$diffmccmean_p3hm3h_SN          <- x$tccp3hm3hmean_south     - x$tccp3hm3hmean_north
+x$difflccmean_p3hm3h_SN          <- x$tccp3hm3hmean_south     - x$tccp3hm3hmean_north
+
+

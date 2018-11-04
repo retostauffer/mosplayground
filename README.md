@@ -2,7 +2,6 @@
 title: "Mos Playground"
 ---
 
-
 I was looking for some fun and thought I should try to set up
 some postprocessing models to predict some weather quantities
 for the wetterturnier.
@@ -57,3 +56,35 @@ The script `GFS_convert.py` takes all GFS subset files and combines
 them in one single NetCDF file per model initialization. These files
 will be used later for the interpolation and whatever comes next.
 Does not delete the grib files.
+
+
+Interpolate GFS
+===============
+
+After the grib files have been converted to NetCDF (`GFS_convert.py`)
+I am using a NetCDF based bilinear interpolation written in R. 
+Please note that this requires the `mospack` (which is also part
+of this repository) to be installed.
+
+`GFS_interpolate.R` interpolates all NetCDF files in the `netcdf` folder
+which match the expected file name `^GFS_[0-9]{8}_[0-9]{4}_combined.nc$`.
+The interpolated and reshaped objects (`zoo`) will be stored in a new
+`rds` folder.
+
+
+OGIMET_synop_parser.py
+======================
+
+Downloading and parsing historical synop messages to create the observation
+data sets. _Please do use ogimet downloads with care_, ogimet is not a data
+provider, even if he has some data API interfaces.
+
+`python OGIMET_synop_parser.py -s <station>` should download the synop files,
+stores the downloaded files into the `obs_html` folder, and creates `sqlite3`
+databases with the observations (folder `obs_sqlite3`).  Requires, of course,
+sqlite3 and the corresponding python package to be installed.
+
+
+
+
+

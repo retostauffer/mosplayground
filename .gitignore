@@ -1,9 +1,15 @@
 
 
-# Ignore
+# Ignore pyc and grid engine output
 *.pyc
-data/
 _*.[oe]*
 
+# Data folders
+rds/*
+data/*
+netcdf/*
 obs_html/*
 obs_sqlite3/*
+
+# Ignore compiled package(s)
+mospack_*.tar.gz

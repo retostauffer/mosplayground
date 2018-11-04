@@ -1,0 +1,13 @@
+# -------------------------------------------------------------------
+# Small table used for variable name conversion/renaming when loading
+# GFS deterministic forecasts from NetCDF files.
+# -------------------------------------------------------------------
+shortName;                    newName
+TCDC_highcloudlayer;          hcc
+TCDC_lowcloudlayer;           lcc 
+TCDC_middlecloudlayer;        mcc
+TCDC_convectivecloudlayer;    ccc
+TCDC_entireatmosphere;        tcdc
+PRES_surface;                 psfc
+PRMSL_meansealevel;           pmsl
+

@@ -1,0 +1,80 @@
+exportPattern("^[[:alpha:]]+")
+
+######useDynLib(foehnpack)
+######import("zoo", "stats", "utils")
+######importFrom("sp", "coordinates")
+######
+######export(
+######
+######  # Testing some stuff!!
+######  "HMM_test", "viterbi_HMM_test",
+######
+######  "prepareDMO",
+######  "spatialCovariates",
+######  "accumulated",
+######  "neighbours",
+######  "theta",
+######  "model",
+######  "performance",
+######
+######  # ERA5 handling
+######  "nc_bilinear",
+######
+######  # Handling observational data sets
+######  "loadobservations",
+######  "observationsQualityCheck",
+######  "clean",
+######
+######  # Perform foehn classification
+######  "foehnclassification",
+######  "classificationCheckPlot",
+######  "climplot",
+######
+######  # Scoring stuff
+######  "showReliab",
+######
+######  # glmnet interface for logistic models
+######  "foehnglm",
+######  "cv.foehnglm"
+######  )
+######
+####### S3 methods for the foehnglm model (glmnet)
+######S3method( "predict", "foehnglm" )
+######S3method( "formula", "foehnglm" )
+######
+####### S3 for the quality check object
+######S3method( "plot",  "obsqualitycheck" )
+######S3method( "clean", "obsqualitycheck" )
+######
+####### S3 methods for the cv.foehnglm model (cv.glmnet)
+######S3method( "predict", "cv.foehnglm" )
+######S3method( "formula", "cv.foehnglm" )
+######
+####### S3 methods for the foehn classification object
+####### returned by foehnclassification.
+######S3method( "model",        "foehncls" )
+######S3method( "fitted",       "foehncls" )
+######S3method( "predict",      "foehncls" )
+######S3method( "model.frame",  "foehncls" )
+######S3method( "formula",      "foehncls" )
+######S3method( "coefficients", "foehncls" )
+######S3method( "coef",         "foehncls" )
+######S3method( "family",       "foehncls" )
+######S3method( "print",        "foehncls.coef" )
+######S3method( "plot",         "foehncls" )
+######
+####### Slimified version
+######S3method( "formula",      "flexmixslim" )
+######S3method( "coef",         "flexmixslim" )
+######S3method( "coefficients", "flexmixslim" )
+######S3method( "family",       "flexmixslim" )
+######S3method( "prior",        "flexmixslim" )
+######S3method( "parameters",   "flexmixslim" )
+######S3method( "parameters",   "flexmix" )
+######S3method( "concomitant",   "flexmixslim" )
+######S3method( "concomitant",   "flexmix" )
+
+
+
+
+

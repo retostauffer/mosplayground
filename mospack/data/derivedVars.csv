@@ -1,0 +1,120 @@
+# -------------------------------------------------------------------
+# File used to compute derived variables.
+# This file contains the equation (R syntax). Each equation will be evaluated
+# inside the package. Important: for the foehnpack we use different
+# stations, wherefore all variables are named <station>.<variablename>.
+# The keyword <s> will be replaced with the current station name.
+#
+# The file is processed sequentially top down. So in case one derived
+# variable depends on another derived variable you have to take care
+# that they are in correct order!
+# -------------------------------------------------------------------
+equation
+# Total precipitation
+<s>.tp         <-   <s>.cp + <s>.lsp
+# Dewpoint depression 2m above surface
+<s>.dpd2m      <-   <s>.t2m - <s>.d2m
+# Wind speed
+<s>.ff10m      <-   sqrt( <s>.u10^2   + <s>.v10^2   )
+<s>.ff1000     <-   sqrt( <s>.u1000^2 + <s>.v1000^2 )
+<s>.ff925      <-   sqrt( <s>.u925^2  + <s>.v925^2  )
+<s>.ff850      <-   sqrt( <s>.u850^2  + <s>.v850^2  )
+<s>.ff700      <-   sqrt( <s>.u700^2  + <s>.v700^2  )
+<s>.ff500      <-   sqrt( <s>.u500^2  + <s>.v500^2  )
+# Level thickness
+<s>.lt925_1000 <-   <s>.z925 - <s>.z1000
+<s>.lt850_1000 <-   <s>.z850 - <s>.z1000
+<s>.lt700_1000 <-   <s>.z700 - <s>.z1000
+<s>.lt500_1000 <-   <s>.z500 - <s>.z1000
+<s>.lt850_925  <-   <s>.z850 - <s>.z925
+<s>.lt700_925  <-   <s>.z700 - <s>.z925
+<s>.lt500_925  <-   <s>.z500 - <s>.z925
+<s>.lt700_850  <-   <s>.z700 - <s>.z850
+<s>.lt500_850  <-   <s>.z500 - <s>.z850
+<s>.lt500_700  <-   <s>.z500 - <s>.z700
+# Temperature differences between different levels
+<s>.td925_1000 <-   <s>.t925 - <s>.t1000
+<s>.td850_1000 <-   <s>.t850 - <s>.t1000
+<s>.td700_1000 <-   <s>.t700 - <s>.t1000
+<s>.td500_1000 <-   <s>.t500 - <s>.t1000
+<s>.td850_925  <-   <s>.t850 - <s>.t925
+<s>.td700_925  <-   <s>.t700 - <s>.t925
+<s>.td500_925  <-   <s>.t500 - <s>.t925
+<s>.td500_850  <-   <s>.t700 - <s>.t850
+<s>.td700_850  <-   <s>.t500 - <s>.t850
+<s>.td500_700  <-   <s>.t500 - <s>.t700
+# Lapse rates
+<s>.lapse925_1000 <- (<s>.t925 - <s>.t1000) / (<s>.z925 - <s>.z1000) / 9.81
+<s>.lapse850_1000 <- (<s>.t850 - <s>.t1000) / (<s>.z850 - <s>.z1000) / 9.81
+<s>.lapse700_1000 <- (<s>.t700 - <s>.t1000) / (<s>.z700 - <s>.z1000) / 9.81
+<s>.lapse500_1000 <- (<s>.t500 - <s>.t1000) / (<s>.z500 - <s>.z1000) / 9.81
+<s>.lapse850_925  <- (<s>.t850 - <s>.t925 ) / (<s>.z850 - <s>.z925 ) / 9.81
+<s>.lapse700_925  <- (<s>.t700 - <s>.t925 ) / (<s>.z700 - <s>.z925 ) / 9.81
+<s>.lapse500_925  <- (<s>.t500 - <s>.t925 ) / (<s>.z500 - <s>.z925 ) / 9.81
+<s>.lapse700_850  <- (<s>.t700 - <s>.t850 ) / (<s>.z700 - <s>.z850 ) / 9.81
+<s>.lapse500_850  <- (<s>.t500 - <s>.t850 ) / (<s>.z500 - <s>.z850 ) / 9.81
+<s>.lapse500_700  <- (<s>.t500 - <s>.t700 ) / (<s>.z500 - <s>.z700 ) / 9.81
+# Omega shear
+<s>.oshear925_1000 <-   <s>.vo925 - <s>.vo1000
+<s>.oshear850_1000 <-   <s>.vo850 - <s>.vo1000
+<s>.oshear700_1000 <-   <s>.vo700 - <s>.vo1000
+<s>.oshear500_1000 <-   <s>.vo500 - <s>.vo1000
+<s>.oshear850_925  <-   <s>.vo850 - <s>.vo925 
+<s>.oshear700_925  <-   <s>.vo700 - <s>.vo925 
+<s>.oshear500_925  <-   <s>.vo500 - <s>.vo925 
+<s>.oshear700_850  <-   <s>.vo700 - <s>.vo850 
+<s>.oshear500_850  <-   <s>.vo500 - <s>.vo850 
+<s>.oshear500_700  <-   <s>.vo500 - <s>.vo700 
+# V compontent wind shear
+<s>.vshear925_1000 <-   <s>.v925 - <s>.v1000
+<s>.vshear850_1000 <-   <s>.v850 - <s>.v1000
+<s>.vshear700_1000 <-   <s>.v700 - <s>.v1000
+<s>.vshear500_1000 <-   <s>.v500 - <s>.v1000
+<s>.vshear850_925  <-   <s>.v850 - <s>.v925
+<s>.vshear700_925  <-   <s>.v700 - <s>.v925
+<s>.vshear500_925  <-   <s>.v500 - <s>.v925
+<s>.vshear700_850  <-   <s>.v700 - <s>.v850
+<s>.vshear500_850  <-   <s>.v500 - <s>.v850
+<s>.vshear500_700  <-   <s>.v500 - <s>.v700
+# U component wind shear
+<s>.ushear925_1000 <-   <s>.u925 - <s>.u1000
+<s>.ushear850_1000 <-   <s>.u850 - <s>.u1000
+<s>.ushear700_1000 <-   <s>.u700 - <s>.u1000
+<s>.ushear500_1000 <-   <s>.u500 - <s>.u1000
+<s>.ushear850_925  <-   <s>.u850 - <s>.u925
+<s>.ushear700_925  <-   <s>.u700 - <s>.u925
+<s>.ushear500_925  <-   <s>.u500 - <s>.u925
+<s>.ushear700_850  <-   <s>.u700 - <s>.u850
+<s>.ushear500_850  <-   <s>.u500 - <s>.u850
+<s>.ushear500_700  <-   <s>.u500 - <s>.u700
+# Set of wind shear (wind speed)
+<s>.ffshear925_1000 <- sqrt(<s>.u925^2 + <s>.v925^2) - sqrt(<s>.u1000^2 + <s>.v1000^2)
+<s>.ffshear850_1000 <- sqrt(<s>.u850^2 + <s>.v850^2) - sqrt(<s>.u1000^2 + <s>.v1000^2)
+<s>.ffshear700_1000 <- sqrt(<s>.u700^2 + <s>.v700^2) - sqrt(<s>.u1000^2 + <s>.v1000^2)
+<s>.ffshear500_1000 <- sqrt(<s>.u500^2 + <s>.v500^2) - sqrt(<s>.u1000^2 + <s>.v1000^2)
+<s>.ffshear850_925  <- sqrt(<s>.u850^2 + <s>.v850^2) - sqrt(<s>.u925^2  + <s>.v925^2)
+<s>.ffshear700_925  <- sqrt(<s>.u700^2 + <s>.v700^2) - sqrt(<s>.u925^2  + <s>.v925^2)
+<s>.ffshear500_925  <- sqrt(<s>.u500^2 + <s>.v500^2) - sqrt(<s>.u925^2  + <s>.v925^2)
+<s>.ffshear700_850  <- sqrt(<s>.u700^2 + <s>.v700^2) - sqrt(<s>.u850^2  + <s>.v850^2)
+<s>.ffshear500_850  <- sqrt(<s>.u500^2 + <s>.v500^2) - sqrt(<s>.u850^2  + <s>.v850^2)
+<s>.ffshear500_700  <- sqrt(<s>.u500^2 + <s>.v500^2) - sqrt(<s>.u700^2  + <s>.v700^2)
+# Potential temperature: please keep in mind that msl (mean
+# sea level pressure) for surface pressure is in Pascal!
+# The constant 0.2857157 is R/cp, 287.05/1004.67.
+<s>.theta2m         <- <s>.t2m   * ( (1000/<s>.msl/100)^0.2857157 )
+<s>.theta925        <- <s>.t925  * ( (1000/925)^0.2857157 )
+<s>.theta850        <- <s>.t850  * ( (1000/850)^0.2857157 )
+<s>.theta700        <- <s>.t700  * ( (1000/700)^0.2857157 )
+<s>.theta500        <- <s>.t500  * ( (1000/500)^0.2857157 )
+# Potential temperature differneces (vertically)
+# theta1000 == t1000 (as 1000 is our refernece level)
+<s>.theta925_1000   <- <s>.theta925 - <s>.t1000
+<s>.theta850_1000   <- <s>.theta850 - <s>.t1000
+<s>.theta700_1000   <- <s>.theta700 - <s>.t1000
+<s>.theta500_1000   <- <s>.theta500 - <s>.t1000
+<s>.theta500_850    <- <s>.theta500 - <s>.theta850
+<s>.theta500_700    <- <s>.theta500 - <s>.theta700
+<s>.theta700_850    <- <s>.theta700 - <s>.theta850
+<s>.theta2m_1000    <- <s>.theta2m  - <s>.t1000
+<s>.theta700_2m     <- <s>.theta700 - <s>.theta2m
+<s>.theta850_2m     <- <s>.theta850 - <s>.theta2m

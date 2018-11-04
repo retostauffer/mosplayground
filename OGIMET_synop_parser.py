@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 17:56 on marvin
+# - L@ST MODIFIED: 2018-11-04 20:06 on marvin
 # -------------------------------------------------------------------
 
 
@@ -627,8 +627,8 @@ class synopmessage():
         if len(x) == 0: return
         # Schneehoehe in cm (997 = < 0.5 cm,
         # 998 = Flecken oder Reste, 999 = Angabe nicht moeglich)
-        if not x[1] == "/": self._Eschnee = int(x[1])
-        self._snh     = int(x[2:])
+        if not x[1] == "/":    self._Eschnee = int(x[1])
+        if not x[2:] == "///": self._snh     = int(x[2:])
 
     # ----------------------
     def _decode_333_55SSS(self, x):
