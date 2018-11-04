@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 17:31 on marvin
+# - L@ST MODIFIED: 2018-11-04 17:56 on marvin
 # -------------------------------------------------------------------
 
 
@@ -271,7 +271,7 @@ class synopmessage():
     # Regex expression to parse data from the clim block "333"
     # 0.... 1sTTT 2sTTT 3EsTT 4E'sss 55SSS 2FFFF 3FFFF 4FFFF 553SS 2FFFF 3FFFF 4FFFF 6RRRt 7RRRR 8NChh 9SSss 
     rd   = "(\s0\S{4})?(\s1\S{4})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?" + \
-           "(\s55\S{3})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s553\S{2})?" + \
+           "(\s55[^3\S]{3})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s553\S{2})?" + \
            "(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s6\S{4})?(\s7\S{4})?"
     rd89 = "(\s[89].*)?"
     regex333 = re.compile("^333" + rd + rd89 + "(?=\s[0-9]{3}\s)?.*?$")
@@ -433,6 +433,8 @@ class synopmessage():
     def _decode_1sTTT(self, x): 
         self._T = None
         if len(x) == 0: return
+        # Empty message
+        if x[1:] == "////": return
         self._T = int(x[2:])
         if int(x[1]) == 1: self._T = -self._T
 
@@ -441,6 +443,8 @@ class synopmessage():
         self._rh = None
         self._Td = None
         if len(x) == 0: return
+        # Empty message
+        if x[1:] == "////": return
         # In this case we do have relative humidity
         # and not dewpoint temperature.
         if x[1] == "9":
@@ -453,6 +457,8 @@ class synopmessage():
     def _decode_3PPPP(self, x): 
         self._p = None
         if len(x) == 0: return
+        # Empty message
+        if x[1:] == "////": return
         # If 3PPP/: full hPa
         if re.match("^3[0-9]{3}/$", x):
             self._p = 10 * int(x[1:4])
@@ -476,10 +482,14 @@ class synopmessage():
         self._ptend = None
         self._pch   = None
         if len(x) == 0: return
+        # Empty message
+        if x[1:] == "////": return
+        # Else extract information
         self._ptend = int(x[1])
-        self._pch   = int(x[2:])
-        if self._ptend > 5:
-            self._pch = -self._pch
+        if not x[2:] == "///":
+            self._pch   = int(x[2:])
+            if self._ptend > 5:
+                self._pch = -self._pch
 
     # ----------------------
     def _decode_6RRRt(self, x): 
@@ -487,6 +497,8 @@ class synopmessage():
         
         if len(x) == 0: return
         if x[4] == "/" or x[4] == "0": return
+        # Empty message (no precip)
+        if x[1:4] == "///": return
 
         # 0 -- nicht aufgefuehrter oder vor dem Termin endender Zeitraum
         # 1 -- 6 Stunden
@@ -623,6 +635,7 @@ class synopmessage():
         self._sunday = None
         if len(x) == 0: return
         # Convert to minutes (what's delivered by BUFR)
+        print(x)
         if not x[2:] == "///":
             self._sunday = int(x[2:]) / 10 * 60
 
@@ -649,7 +662,8 @@ class synopmessage():
         self._sun = None
         if len(x) == 0: return
         # Convert to minutes (what's delivered by BUFR)
-        self._sun = int(x[3:]) / 10 * 60
+        if not x[3:] == "//":
+            self._sun = int(x[3:]) / 10 * 60
 
     # ----------------------
     def _decode_333_6RRRt(self, x):
@@ -803,14 +817,14 @@ if __name__ == "__main__":
                     # If we overstressed ogimet: do not save, sleep 1 minute,
                     # and try again.
                     if re.match("Status: 501 Sorry", content[0]):
-                        print("    Hoppala, overstressed ogimet ... sleep 60 seconds and retry")
-                        time.sleep(60)
+                        print("    Hoppala, overstressed ogimet ... sleep a while and retry")
+                        time.sleep(120)
                     else: 
                         fid = open(synfile, "w")
                         fid.write("".join(content))
                         fid.close()
-                        print("    Just being nice to ogimet, sleep 30 seconds ...")
-                        time.sleep(30)
+                        print("    Just being nice to ogimet, sleep a bit ...")
+                        time.sleep(60)
 
                         break;
     
