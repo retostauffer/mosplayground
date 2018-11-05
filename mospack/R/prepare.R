@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-02-24, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 23:18 on marvin
+# - L@ST MODIFIED: 2018-11-05 00:07 on marvin
 # -------------------------------------------------------------------
 
 ### Function to get a vector of accumulated variables
@@ -35,7 +35,7 @@ computeDerivedVars <- function(x) {
     for ( stn in stations ) {
         for ( i in 1:nrow(derivedVars) ) {
             cmd <- gsub( "<s>", sprintf("x$%s",stn), derivedVars$equation[i] )
-            try(eval(parse(text = cmd)), silent = TRUE)
+            check <- try(eval(parse(text = cmd)), silent = TRUE)
             if ( inherits(check, "try-error") )
                 cat(sprintf("[!DERIV] %s\n", eqn))
         }

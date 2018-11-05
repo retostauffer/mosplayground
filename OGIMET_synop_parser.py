@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 23:17 on marvin
+# - L@ST MODIFIED: 2018-11-05 08:08 on marvin
 # -------------------------------------------------------------------
 
 
@@ -836,6 +836,7 @@ if __name__ == "__main__":
 
             # For database: generate a column vector and fetch data
             colnames = ["datumsec", "T", "Td", "Tmin12", "Tmax12",
+                        "p", "pmsl", "pch", "ptend",
                         "dd", "ff", "ffx", "ffinst",
                         "rr6", "rr12", "rr24",
                         "ww", "W1", "W2", "sun", "sunday"]
