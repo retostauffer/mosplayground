@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-05 08:08 on marvin
+# - L@ST MODIFIED: 2018-11-05 10:08 on marvin
 # -------------------------------------------------------------------
 
 
@@ -752,6 +752,8 @@ if __name__ == "__main__":
                help = "Number of the station to be processes.")
     parser.add_argument("--testfile", type = str, default = None,
                help = "Process this one test file (development).")
+    parser.add_argument("--latest", "-l", type = int, default = None,
+               help = "For operational use, loads the latest N (input latest, int) days only.")
     parser.add_argument("--devel", default = False, action = "store_true",
                help = "Used for development. If set, the script reads config_devel.conf" + \
                       " instead of config.conf.")
@@ -782,18 +784,27 @@ if __name__ == "__main__":
         for mon in range(1, 13):
 
             # If this year/month is in the future: stop.
-            if year == int(dt.date.today().strftime("%Y")) and  \
-               mon > int(dt.date.today().strftime("%m")):
-                print("[!] Stop here, reached current month/year")
-                break
+            if not args["latest"]:
+                if year == int(dt.date.today().strftime("%Y")) and  \
+                   mon > int(dt.date.today().strftime("%m")):
+                    print("[!] Stop here, reached current month/year")
+                    break
 
-            bgn = dt.datetime(year, mon, 1, 0, 0, 0)
-            end = dt.datetime(year + 1 if mon == 12 else year,
-                              1 if mon == 12 else mon + 1, 1, 0, 0)
-    
-            # Generate URL and local file name
-            synfile = os.path.join(config.get("htmldir"), "ogimet_synop_{:d}_{:04d}_{:02d}.dat".format(
-                                    args["station"], year, mon))
+                bgn = dt.datetime(year, mon, 1, 0, 0, 0)
+                end = dt.datetime(year + 1 if mon == 12 else year,
+                                  1 if mon == 12 else mon + 1, 1, 0, 0)
+
+                # Generate URL and local file name
+                synfile = os.path.join(config.get("htmldir"),
+                          "ogimet_synop_{:d}_{:04d}_{:02d}.dat".format(
+                          args["station"], year, mon))
+            else:
+                end = dt.datetime.now()
+                bgn = dt.datetime.now() - dt.timedelta(args["latest"])
+                synfile = os.path.join(config.get("htmldir"),
+                          "ogimet_latest_{:d}.dat".format(args["station"]))
+
+            # URL for data download
             url = "http://www.ogimet.com/cgi-bin/getsynop" + \
                     "?begin={:s}".format(bgn.strftime("%Y%m%d%H%M")) + \
                     "&end={:s}".format(end.strftime("%Y%m%d%H%M")) + \
@@ -824,9 +835,9 @@ if __name__ == "__main__":
                         fid = open(synfile, "w")
                         fid.write("".join(content))
                         fid.close()
-                        print("    Just being nice to ogimet, sleep a bit ...")
-                        time.sleep(60)
-
+                        if args["latest"] is None:
+                            print("    Just being nice to ogimet, sleep a bit ...")
+                            time.sleep(60)
                         break;
     
             print("Reading {:s}".format(synfile))
@@ -855,7 +866,11 @@ if __name__ == "__main__":
     
             db.write(colnames, data)
         
-
+            # If only latest was requested, stop here.
+            if args["latest"]:
+                from os import remove
+                remove(synfile)
+                break
 
 
 

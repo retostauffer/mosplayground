@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-05 07:28 on marvin
+# - L@ST MODIFIED: 2018-11-05 09:47 on marvin
 # -------------------------------------------------------------------
 
     rm(list=ls())
@@ -125,7 +125,7 @@
 
     warning("Taking only first 3 netcdf files here")
     x <- mclapply(ncfiles, FUN = ipfun, stations = stations,
-                  station = "BER", mc.cores = 3)
+                  station = "IBK", mc.cores = 3)
     
     
     combine_zoo <- function(stn, x, step) {

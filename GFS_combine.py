@@ -9,7 +9,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-02, RS: Created file on pc24-c707.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-02 12:36 on pc24-c707
+# - L@ST MODIFIED: 2018-11-05 09:48 on marvin
 # -------------------------------------------------------------------
 
 
@@ -84,7 +84,8 @@ if __name__ == "__main__":
    import datetime as dt
    from glob import glob
    import re
-   for directory in glob(os.path.join(gribdir, "*")):
+   dirs = glob(os.path.join(gribdir, "*")); dirs.sort()
+   for directory in dirs: #glob(os.path.join(gribdir, "*")):
       if not re.match("^" + gribdir + "/[0-9]{12}$", directory): continue
 
       # Extracting date
