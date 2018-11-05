@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-03 18:30 on pc24-c707
+# - L@ST MODIFIED: 2018-11-05 09:31 on marvin
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -24,15 +24,17 @@ def bar():
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
-def get_file_names(baseurl, date, step, filedir):
-    """get_file_names(baseurl, date, step, filedir)
+def get_file_names(config, date, step, filedir):
+    """get_file_names(config, date, step, filedir)
 
     Generates the file names (remote only)
 
     Parameters
     ----------
-    baseurl : str
-        base url, used to format the data (can contain %Y%m%d or similar)
+    config : read_config object
+        the object returned by "read_config"
+    baseurlrolling : str
+        base url for the rolling archive (can contain %Y%m%d or similar)
     date : datetime.datetime
         defines model initialization date and time
     step : int
@@ -46,26 +48,36 @@ def get_file_names(baseurl, date, step, filedir):
     and the grib file ("grib") plus a local file name ("local") and the file
     name of the local subset ("subset").
     """
-    import os
+    from os.path import join
     import datetime as dt
     if not isinstance(filedir, str):
         raise ValueError("filedir has to be a string (get_file_names function)")
     if not isinstance(step, int):
         raise ValueError("step has to be an integer (get_file_names function)")
 
-    # Create URL
-    fileurl  = os.path.join(date.strftime(baseurl), "gfs_4_{:s}_{:s}_{:03d}".format(
-                            date.strftime("%Y%m%d"), date.strftime("%H%M"), step)) 
+    # If forecast run is not older than 5 days
+    today = dt.datetime.today()
+    if ((today - date).total_seconds() / 86400) < 5:
+        baseurl = date.strftime(config.get("rolling_url"))
+        grburl  = date.strftime(config.get("rolling_grb")).replace("<step>", "{:03d}".format(step))
+        idxurl  = date.strftime(config.get("rolling_idx")).replace("<step>", "{:03d}".format(step))
+    else:
+        baseurl = date.strftime(config.get("archive_url"))
+        grburl  = date.strftime(config.get("archive_grb")).replace("<step>", "{:03d}".format(step))
+        idxurl  = date.strftime(config.get("archive_idx")).replace("<step>", "{:03d}".format(step))
 
     # Local file names
     local    = date.strftime("GFS_full_%Y%m%d_%H00") + "_f{:03d}.grb2".format(step)
     subset   = date.strftime("GFS_full_%Y%m%d_%H00") + "_f{:03d}_subset.grb2".format(step)
 
-    from os.path import join
-    return {"grib"   : "{:s}.grb2".format(fileurl),
-            "idx"    : "{:s}.inv".format(fileurl),
-            "local"  : join(filedir, local),
-            "subset" : join(filedir, subset)}
+    files = {"grib"   : join(baseurl, grburl),
+             "idx"    : join(baseurl, idxurl),
+             "local"  : join(filedir, local),
+             "subset" : join(filedir, subset)}
+    for key,val in files.iteritems():
+        print(" - {:<10s} {:s}".format(key, val))
+
+    return files
 
 
 # -------------------------------------------------------------------
@@ -125,6 +137,12 @@ class idx_entry(object):
         self._lev        = str(args[2])
         self._byte_end   = False
 
+        mtch = re.search("^([0-9]+)-([0-9]+)$", args[3])
+        if mtch:
+            self._step = int(mtch.group(2))
+        else:
+            self._step = int(args[3])
+
     def add_end_byte(self, x):
         """add_end_byte(x)
 
@@ -169,6 +187,15 @@ class idx_entry(object):
 
         return "{:s}:{:s}".format(var,lev)
 
+    def step(self):
+        """step()
+
+        Returns
+        -------
+        Message forecast step.
+        """
+        return self._step
+
     def range(self):
         """range()
 
@@ -192,8 +219,8 @@ class idx_entry(object):
             end = "end of file"
         else:
             end = "{:d}".format(self._byte_end)
-        return "IDX ENTRY: {:10d}-{:>10s}, '{:s}'".format(self._byte_start,
-                end, self.key())
+        return "IDX ENTRY: {:10d}-{:>10s}, '{:s}' (+{:d}h)".format(self._byte_start,
+                end, self.key(), self.step())
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
@@ -245,11 +272,12 @@ def parse_index_file(idxfile, remote = True):
     # Parsing data (extracting message starting byte,
     # variable name, and variable level)
     import re
-    comp = re.compile("^\d+:(\d+):d=\d{10}:([^:.*]*):([^:.*]*)")
+    #                       hour            param     level     step
+    comp = re.compile("^\d+:(\d+):d=\d{10}:([^:.?]+):([^:\\..?]*):([0-9-]+)\shour\s([a-z]+\s)?fcst.*$")
     byte = 1 # initial byte
     for line in data:
         if len(line) == 0: continue
-        mtch = re.findall(comp, line)
+        mtch = re.findall(comp, line.replace(".", "-"))
         if not mtch:
             raise Exception("whoops, pattern mismatch \"{:s}\"".format(line))
         # Else crate the variable hash
@@ -337,8 +365,8 @@ def create_index_file(grbfile):
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
-def get_required_bytes(idx, params, stopifnot = False):
-    """get_required_bytes(idx, params, stopifnot = False)
+def get_required_bytes(idx, params, step, stopifnot = False):
+    """get_required_bytes(idx, params, step, stopifnot = False)
 
     Searching for the entries in idx corresponding to the parameter
     definition in params (has to match the grib2 inventory param names, e.g.,
@@ -352,6 +380,8 @@ def get_required_bytes(idx, params, stopifnot = False):
     params : str or list
         names of the parameters for which the data should be downloaded later on.
         Can be a single string or a list of strings.
+    step : int
+        forecast step
     stopifnot : bool
         stop if one (or several) parameters cannot be found in the index
         file. If set to false these messages will simply be ignored.
@@ -364,12 +394,15 @@ def get_required_bytes(idx, params, stopifnot = False):
     # Crate a list of the string if only one string is given.
     if isinstance(params, str): params = [params]
     if not isinstance(params, list):
-        raise ValueError("params has to be a single string or a list (in get_rquired_bytes)")
+        raise ValueError("params has to be a single string or a list")
+    if not isinstance(step, int):
+        raise ValueError("step has to be of tyep int")
 
     # Go trough the entries to find the messages we request for.
     res = []
     found = []
     for x in idx:
+        if not x.step() == step: next
         if x.key() in params:
             res.append(x.range())
             found.append(x.key())
@@ -432,6 +465,26 @@ class read_config():
         self.file = [] # Used to store the config file names
         self.read(file, paramset = paramset)
 
+    def get(self, key):
+        """get(key)
+
+        Returns attribute \"key\" from the object. If not found,
+        a ValueError will be raised.
+
+        Parameter
+        ---------
+        key : str
+            name of the attribute
+
+        Returns
+        -------
+        Returns the value of the attribute from the object if existing,
+        else a ValuerError will be raised.
+        """
+        if not hasattr(self, key):
+            raise ValueError("read_config has no attribute \"{:s}\"".format(key))
+        return getattr(self, key)
+
     def __repr__(self):
 
         res = "GFS Configuration:\n"
@@ -459,11 +512,43 @@ class read_config():
         self._read_params(CNF)
         self._read_steps(CNF)
         self._read_gribdir(CNF)
+        self._read_gfs_urls(CNF)
 
         # If one of the required items is missing: stop
-        for key in ["file", "params", "steps", "gribdir"]:
+        for key in ["file", "params", "steps", "gribdir", \
+                "archive_url", "archive_grb", "archive_idx",
+                "rolling_url", "rolling_grb", "rolling_idx"]:
             if not hasattr(self, key):
                 raise Exception("have not found proper \"{:s}\" definition in config file.".format(key))
+
+
+    def _read_gfs_urls(self, CNF):
+        # GFS archive server
+        try:
+            self.archive_url = CNF.get("gfs", "archive_url")
+        except:
+            pass
+        try:
+            self.archive_grb = CNF.get("gfs", "archive_grb")
+        except:
+            pass
+        try:
+            self.archive_idx = CNF.get("gfs", "archive_idx")
+        except:
+            pass
+        # Live rolling GFS server distribution system
+        try:
+            self.rolling_url = CNF.get("gfs", "rolling_url")
+        except:
+            pass
+        try:
+            self.rolling_grb = CNF.get("gfs", "rolling_grb")
+        except:
+            pass
+        try:
+            self.rolling_idx = CNF.get("gfs", "rolling_idx")
+        except:
+            pass
 
 
     def _read_gribdir(self, CNF):
@@ -478,7 +563,7 @@ class read_config():
         if not hasattr(self, "params"): self.params = {}
         section = "params" if not self.paramset else "params %s".format(self.paramset)
         try:
-            for rec in CNF.items(section): self.params[rec[0]] = rec[1]
+            for rec in CNF.items(section): self.params[rec[0]] = rec[1].replace(".", "-")
         except:
             return
 
@@ -634,7 +719,6 @@ if __name__ == "__main__":
 
     # Config
     outdir = "data"
-    baseurl = "https://nomads.ncdc.noaa.gov/data/gfs4/%Y%m/%Y%m%d/"
     # Subset (requires wgrib2), can also be None.
     # Else a dict with N/S/E/W in degrees (0-360!)
     subset = {"W": 5, "E": 18, "S": 45, "N": 55}
@@ -713,7 +797,7 @@ if __name__ == "__main__":
         print("Processing +{:03d}h forecast".format(step))
 
         # Generate remote file URL's
-        files = get_file_names(baseurl, date, step, filedir)
+        files = get_file_names(config, date, step, filedir)
 
         # Check if all files exist. If so, we can skip this download.
         file_check = check_files_exist(files, config.params, not subset is None, split_files)
@@ -741,7 +825,7 @@ if __name__ == "__main__":
 
         # Read/parse index file (if possible) and identify the
         # required sections (byte-sections) for curl download.
-        required = get_required_bytes(idx, gfs_params, True)
+        required = get_required_bytes(idx, gfs_params, step, True)
 
         # If no messages found: continue
         if required is None:
