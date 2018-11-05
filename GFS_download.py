@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-05 09:31 on marvin
+# - L@ST MODIFIED: 2018-11-05 09:44 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -57,11 +57,13 @@ def get_file_names(config, date, step, filedir):
 
     # If forecast run is not older than 5 days
     today = dt.datetime.today()
-    if ((today - date).total_seconds() / 86400) < 5:
+    if ((today - date).total_seconds() / 86400) < config.get("rolling_ndays"):
+        print("- Downloading GFS from live/rolling server")
         baseurl = date.strftime(config.get("rolling_url"))
         grburl  = date.strftime(config.get("rolling_grb")).replace("<step>", "{:03d}".format(step))
         idxurl  = date.strftime(config.get("rolling_idx")).replace("<step>", "{:03d}".format(step))
     else:
+        print("- Downloading GFS from archive server")
         baseurl = date.strftime(config.get("archive_url"))
         grburl  = date.strftime(config.get("archive_grb")).replace("<step>", "{:03d}".format(step))
         idxurl  = date.strftime(config.get("archive_idx")).replace("<step>", "{:03d}".format(step))
@@ -74,8 +76,7 @@ def get_file_names(config, date, step, filedir):
              "idx"    : join(baseurl, idxurl),
              "local"  : join(filedir, local),
              "subset" : join(filedir, subset)}
-    for key,val in files.iteritems():
-        print(" - {:<10s} {:s}".format(key, val))
+    for key,val in files.iteritems(): print("- {:<10s} {:s}".format(key, val))
 
     return files
 
@@ -517,7 +518,7 @@ class read_config():
         # If one of the required items is missing: stop
         for key in ["file", "params", "steps", "gribdir", \
                 "archive_url", "archive_grb", "archive_idx",
-                "rolling_url", "rolling_grb", "rolling_idx"]:
+                "rolling_url", "rolling_grb", "rolling_idx", "rolling_ndays"]:
             if not hasattr(self, key):
                 raise Exception("have not found proper \"{:s}\" definition in config file.".format(key))
 
@@ -547,6 +548,10 @@ class read_config():
             pass
         try:
             self.rolling_idx = CNF.get("gfs", "rolling_idx")
+        except:
+            pass
+        try:
+            self.rolling_ndays = CNF.getint("gfs", "rolling_ndays")
         except:
             pass
 
