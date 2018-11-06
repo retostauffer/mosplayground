@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-05 09:44 on pc24-c707
+# - L@ST MODIFIED: 2018-11-06 16:25 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -463,6 +463,7 @@ class read_config():
         """
 
         self.paramset = paramset
+        self.params   = {} # Default value, no parameters to load
         self.file = [] # Used to store the config file names
         self.read(file, paramset = paramset)
 
@@ -566,7 +567,9 @@ class read_config():
 
         # If not yet set: create a new dictionary
         if not hasattr(self, "params"): self.params = {}
-        section = "params" if not self.paramset else "params %s".format(self.paramset)
+        section = "params" if not self.paramset else "params {:s}".format(self.paramset)
+        if not CNF.has_section(section):
+            return
         try:
             for rec in CNF.items(section): self.params[rec[0]] = rec[1].replace(".", "-")
         except:
@@ -784,6 +787,10 @@ if __name__ == "__main__":
     # Reading parameter configuration
     config = read_config("config.conf", args["set"])
     if args["devel"]: config.read("devel.conf")
+
+    # No parameters?
+    if len(config.params) == 0:
+        raise Exception("No parameters to download! Check config files and --set option")
 
     bar(); print config; bar()
 
