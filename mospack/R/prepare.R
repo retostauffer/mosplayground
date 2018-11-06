@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-02-24, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-06 16:15 on marvin
+# - L@ST MODIFIED: 2018-11-06 17:11 on marvin
 # -------------------------------------------------------------------
 
 ### Function to get a vector of accumulated variables
@@ -35,12 +35,13 @@ derivedCovariates <- function(x, stoponerror = FALSE) {
     dcov <- derived_covariates
     for ( stn in stations ) {
         for ( i in 1:nrow(dcov) ) {
+            if ( nchar(trimws(dcov$equation[i])) == 0 ) next
             cmd <- gsub( "<s>", sprintf("x$%s",stn), dcov$equation[i] )
             check <- try(eval(parse(text = cmd)), silent = TRUE)
             if ( inherits(check, "try-error") ) {
-                cat(sprintf("[!DERIV] %s\n", eqn))
+                cat(sprintf("[!DERIV] %s\n", cmd))
                 if ( stoponerror ) {
-                    message(sprintf("Problems computing the equation\n%s", eqn))
+                    message(sprintf("Problems computing the equation\n%s", cmd))
                     browser()
                 }
             }
@@ -57,7 +58,15 @@ spatialCovariates <- function(x, stoponerror = TRUE) {
     data("spatial_covariates", package = "mospack" )
     scov <- spatial_covariates
     for ( eqn in as.character(scov$equation) ) {
+        if ( nchar(trimws(eqn)) == 0 ) next
         eqn <- gsub("\\[q\\]","\"",eqn)
+
+        # Check if variable exists already
+        tmp <- regmatches(eqn, regexpr("\\$[\\S]+", eqn, perl = TRUE))
+        if ( length(tmp) == 0 ) stop("Problems with regular expression")
+        if ( substr(tmp, 2, nchar(tmp)) %in% names(x) ) next
+        
+        # Extracting the parameter and check if already existing.
         check <- try(eval(parse(text = eqn)), silent = TRUE)
         if ( inherits(check, "try-error") ) {
             cat(sprintf("[!SPAT] %s\n", eqn))
@@ -85,8 +94,6 @@ temporalCovariates <- function(x, stoponerror = FALSE) {
 
     # Checking stations
     stations <- unique(gsub("\\.","",regmatches(names(x),regexpr("[a-zA-Z]+\\.",names(x)))))
-    data("derivedVars", package = "mospack")
-
     for ( i in 1:nrow(tcov) ) {
 
         # Extract step1/step2 (definition) for convenience

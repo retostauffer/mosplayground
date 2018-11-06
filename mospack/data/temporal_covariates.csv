@@ -16,7 +16,7 @@
 # this:
 #       step1;    step2;    varname
 #         -6 ;       0 ;    <s>.t2m
-# <s> is a wildcard for all grid points (S/N/W/E/SS/NN/C), can also be
+# <s> is a wildcard for all grid points (S/SE/E/NE/N/NW/W/SW), can also be
 # set explicitliy (e.g., C.t2m).
 # A new variable will be computed of the form
 # <varname>_<sign_step2><abs_step2>h<sign_step1><abs_step1>h
@@ -24,7 +24,7 @@
 #       t2m_p0hm3h
 # This variable name can be read as "t2m, (temporal) difference
 # between plus (p) 0 hours minus minus (m) 6 hours.
-# Note that this will be done for ALL grid points (S, W, N, E, NN, SS, C)
+# Note that this will be done for ALL grid points (S/SE/E/NE/N/NW/W/SW)
 # such that we can, afterwards, compute spatial temporal differences and stuff.
 # -------------------------------------------------------------------
 step1; step2; varname
@@ -42,17 +42,40 @@ step1; step2; varname
    0 ;   3  ; <s>.pmsl
   -3 ;   0  ; <s>.pmsl
 
+  -6 ;   0  ; <s>.psfc
+  -6 ;   6  ; <s>.psfc
+   0 ;   6  ; <s>.psfc
+  -3 ;   3  ; <s>.psfc
+   0 ;   3  ; <s>.psfc
+  -3 ;   0  ; <s>.psfc
+
   -6 ;   0  ; <s>.theta700_850
   -6 ;   6  ; <s>.theta700_850
    0 ;   6  ; <s>.theta700_850
 
-  -6 ;   0  ; <s>.theta850
-  -6 ;   6  ; <s>.theta850
-   0 ;   6  ; <s>.theta850
+  -3 ;   0  ; <s>.theta700_850
+  -3 ;   3  ; <s>.theta700_850
+   0 ;   3  ; <s>.theta700_850
+
+  -3 ;   0  ; <s>.theta700
+  -3 ;   3  ; <s>.theta700
+   0 ;   3  ; <s>.theta700
+
+  -3 ;   0  ; <s>.theta850
+  -3 ;   3  ; <s>.theta850
+   0 ;   3  ; <s>.theta850
+
+  -3 ;   0  ; <s>.theta950
+  -3 ;   3  ; <s>.theta950
+   0 ;   3  ; <s>.theta950
 
   -6 ;   0  ; <s>.theta700
   -6 ;   6  ; <s>.theta700
    0 ;   6  ; <s>.theta700
+
+  -6 ;   0  ; <s>.theta850
+  -6 ;   6  ; <s>.theta850
+   0 ;   6  ; <s>.theta850
 
   -6 ;   0  ; <s>.theta950
   -6 ;   6  ; <s>.theta950

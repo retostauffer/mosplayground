@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-06 16:30 on marvin
+# - L@ST MODIFIED: 2018-11-06 17:13 on marvin
 # -------------------------------------------------------------------
 
     rm(list=ls())
@@ -101,12 +101,21 @@
         x <- setNames(x, as.character(unique_stations))
     
         # Compute derived variables
+        cat("\n -> Calling derived covariates\n")
         x <- lapply(x, mospack::derivedCovariates, stoponerror = stoponerror)
+
+        # Compute spatial covariates (first time), force stoponerror to FALSE.
+        # we need to call this method twice as some rely on temporal differences,
+        # while some temporal differences depend on spatial covariates.
+        cat("\n -> Calling spatialCovariates 1th time\n")
+        x <- lapply(x, mospack::spatialCovariates, stoponerror = FALSE)
     
         # Compute temporal differences
+        cat("\n -> Calling temporalCovariates\n")
         x <- lapply(x, mospack::temporalCovariates, stoponerror = stoponerror)
 
         # Compute spatial covariates
+        cat("\n -> Calling spatialCovariates 2nd time\n")
         x <- lapply(x, mospack::spatialCovariates, stoponerror = stoponerror)
     
         # Append forecast step
@@ -124,12 +133,12 @@
 # Interpolate data now
 # ---------------------------------------------------------------------
     # Testing
-    testfile <- "netcdf/GFS_20181106_0000_combined.nc"
-    message(sprintf("Reading %s\n\n", testfile))
-    x <- ipfun(testfile, stations = stations, station = "IBK", stoponerror = TRUE)
-    stop('-dev-')
+    #testfile <- "netcdf/GFS_20181106_0000_combined.nc"
+    #message(sprintf("Reading %s\n\n", testfile))
+    #x <- ipfun(testfile, stations = stations, station = "IBK", stoponerror = TRUE)
+    #stop('-dev-')
 
-    warning("Taking only first 3 netcdf files here")
+    # Interpolate on three cores ...
     x <- mclapply(ncfiles, FUN = ipfun, stations = stations,
                   station = "IBK", mc.cores = 3)
     
