@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-05 09:47 on marvin
+# - L@ST MODIFIED: 2018-11-06 16:30 on marvin
 # -------------------------------------------------------------------
 
     rm(list=ls())
@@ -58,7 +58,7 @@
 # ---------------------------------------------------------------------
 # Interpolation function, this thing does the job!
 # ---------------------------------------------------------------------
-    ipfun <- function(file, stations, rdsdir = "rds", station = NULL) {
+    ipfun <- function(file, stations, rdsdir = "rds", station = NULL, stoponerror = FALSE) {
 
         # If input "station" is not NULL: only interpolate
         # this one specific station (and their neighbours).
@@ -101,10 +101,13 @@
         x <- setNames(x, as.character(unique_stations))
     
         # Compute derived variables
-        x <- lapply(x, mospack::computeDerivedVars)
+        x <- lapply(x, mospack::derivedCovariates, stoponerror = stoponerror)
     
         # Compute temporal differences
-        x <- lapply(x, computeTemporalDifferences)
+        x <- lapply(x, mospack::temporalCovariates, stoponerror = stoponerror)
+
+        # Compute spatial covariates
+        x <- lapply(x, mospack::spatialCovariates, stoponerror = stoponerror)
     
         # Append forecast step
         add_step <- function(x, init)
@@ -121,7 +124,10 @@
 # Interpolate data now
 # ---------------------------------------------------------------------
     # Testing
-    #x <- ipfun(ncfiles[1], stations = stations, station = "IBK")
+    testfile <- "netcdf/GFS_20181106_0000_combined.nc"
+    message(sprintf("Reading %s\n\n", testfile))
+    x <- ipfun(testfile, stations = stations, station = "IBK", stoponerror = TRUE)
+    stop('-dev-')
 
     warning("Taking only first 3 netcdf files here")
     x <- mclapply(ncfiles, FUN = ipfun, stations = stations,
