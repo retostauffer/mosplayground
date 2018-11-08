@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-05, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-05 10:24 on marvin
+# - L@ST MODIFIED: 2018-11-08 12:59 on marvin
 # -------------------------------------------------------------------
 
     Sys.setenv("TZ" = "UTC")
@@ -145,10 +145,144 @@
     }
 
 
+    get_observations <- function(param, station) {
+
+        param <- match.arg(param, c("TTm", "TTn", "N", "Sd", "dd", "ff", "fx",
+                                    "Wv", "Wn", "PPP", "TTd", "RR"))
+
+        # ----------------------------
+        # Define what to load from the sqlite3 tables (translate
+        # wetterturnier parameter to sqlite3 columns)
+        scale <- 10
+        if      ( param == "TTm" ) { obshour <-   18;   obsparam <- "tmax12" }
+        else if ( param == "TTn" ) { obshour <-    6;   obsparam <- "tmin12" }
+        else if ( param == "TTd" ) { obshour <-   12;   obsparam <- "td" }
+        else if ( param == "PPP" ) { obshour <-   12;   obsparam <- "pmsl" }
+        else if ( param == "dd"  ) { obshour <-   12;   obsparam <- "dd" }
+        else if ( param == "ff"  ) { obshour <-   12;   obsparam <- "ff" }
+        else if ( param == "N"   ) { obshour <-   12;   obsparam <- "N"; scale <- 1 }
+        else if ( param == "RR"  ) { obshour <- NULL;   obsparam <- c("rr6", "rr12", "rr24") }
+        else if ( param == "Sd"  ) { obshour <- NULL;   obsparam <- c("sun", "sunday"); scale <- 3600 }
+        else if ( param == "fx"  ) { obshour <- NULL;   obsparam <- c("ffx", "ffinst"); scale <- 1 }
+
+        # ----------------------------
+        library("RMySQL")
+        con <- dbConnect(RSQLite::SQLite(), "obs_sqlite3/obs_11120.sqlite3")
+        res <- dbSendQuery(con, sprintf("SELECT datumsec, %s FROM obs;", paste(obsparam, collapse = ",")))
+        obs <- fetch(res, -1)
+        dbClearResult(res)
+        dbDisconnect(con)
+        obs <- zoo(obs[,-1] / scale, as.POSIXct(obs[,1], origin = "1970-01-01"))
+        if ( is.numeric(obshour) )
+            obs <- subset(obs, as.POSIXlt(index(obs))$hour == obshour)
+
+        print(head(obs))
+        # ----------------------------
+        if ( param == "fx" ) {
+            timefun <- function(x)
+                as.POSIXct(ceiling((as.numeric(x) - 6*3600) / 86400) * 86400 + 6*3600, origin = "1970-01-01")
+            aggfun <- function(x) {
+                if ( sum(!is.na(x)) == 0 ) return(NA)
+                max(x, na.rm = TRUE)
+            }
+            obs <- aggregate(obs, timefun, aggfun) 
+            maxfun <- function(x) { if ( sum(!is.na(x)) == 0 ) NA else max(x, na.rm = TRUE) }
+            obs <- zoo(apply(obs, 1, maxfun), index(obs))
+        } else if ( param == "RR" ) {
+
+            # Subsetting hours
+            obs <- subset(obs, as.POSIXlt(index(obs))$hour %in% c(0, 6, 12, 18))
+
+            # If we have no rr6: assume it was -3.0
+            idx <- which(as.POSIXlt(index(obs))$hour %in% c(0, 6, 12, 18) & is.na(obs$rr6))
+            if ( length(idx) > 0 ) obs$rr6[idx] <- -3.0
+
+            # Drop all columns with no values at all
+            idx <- which(apply(obs, 1, function(x) sum(!is.na(x)) > 0))
+            if ( length(idx) == 0 ) {
+                warning("No valid RR observation at all")
+                return(NULL)
+            }
+            obs <- obs[idx,]
+
+            # Deaccumulate rr12 to rr6
+            tmp <- obs$rr6; index(tmp) <- index(tmp) + 6*3600
+            tmp <- cbind(obs, tmp)
+            tmp$tmp <- tmp$rr12 - tmp$tmp
+            idx <- which(!is.na(tmp$tmp))
+            if ( length(idx) > 0 ) {
+                tmp$rr6[idx] <- tmp$tmp[idx]
+                obs <- subset(tmp, select = -tmp)
+            }
+
+            # Aggregate rr6 to rr12 and check if they match
+            timefun <- function(x) 
+                as.POSIXct(ceiling((as.numeric(x) - 6*3600) / 43200) * 43200 + 6*3600, origin = "1970-01-01")
+            aggfun  <- function(x) {
+                if ( length(na.omit(x)) != 2 ) return(NA)
+                print(x)
+                if ( all(x <= -3.0) ) return(-3.0)
+                sum(x[x>=0])
+            }
+            obs$rr12_calc <- aggregate(obs$rr6, timefun, aggfun)
+print(head(obs,20))
+browser()
+
+        } else if ( param == "N" ) {
+            obs[obs == 9] <- NA
+        }
+
+        cat("Observations loaded ...\n")
+        print(head(obs))
+        return(obs)
+
+    }
+    RR  <- get_observations("RR", 11120)
+
+    obs <- RR
+    print(merge(tmp, x))
+    print(summary(RR))
+print(sum(!is.na(Sd)))
+
+
+    TTm <- get_observations("TTm", 11120)
+    TTn <- get_observations("TTn", 11120)
+    TTd <- get_observations("TTd", 11120)
+    PPP <- get_observations("PPP", 11120)
+    RR  <- get_observations("RR", 11120)
+    Sd  <- get_observations("Sd", 11120)
+    dd  <- get_observations("dd", 11120)
+    ff  <- get_observations("ff", 11120)
+    fx  <- get_observations("fx", 11120)
+    N   <- get_observations("N", 11120)
+
 # -------------------------------------------------------------------
 # TESTING TTm
 # -------------------------------------------------------------------
     if ( TRUE ) {
+        # Some definitions
+        stp   <- 12 + 24*1
+        city  <- "IBK"
+        stn   <- 11120
+        param <- "RR"
+        obsparam <- "RR14"
+        obshour <- 06
+        persistence <- TRUE
+
+        # Checking wetterturnier RMSE from some good players
+        georg <- get_wetterturnier_fcst(param, stn, "Georg")
+        get_wetterturnier_fcst(param, stn, "adri_der_pinner")
+        get_wetterturnier_fcst(param, stn, "DWD-MOS-Mix")
+        get_wetterturnier_fcst(param, stn, "DWD-EZ-Mos")
+
+        data <- load_GFS(city, stp, obsparam, obshour, persistence)
+        print(head(data[,1:3]))
+
+        idx <- which(apply(data, 2, function(x) sum(is.na(x)) / length(x)) > .1)
+        if ( length(idx) > 0 ) data <- data[,-idx]
+    }
+
+    if ( FALSE ) {
 
         # Some definitions
         stp   <- 12 + 24*2
@@ -168,7 +302,7 @@
         persistence <- TRUE
 
         # Some definitions
-        stp   <- 12 + 24*2
+        stp   <- 12 + 24*1
         city  <- "IBK"
         stn   <- 11120
         param <- "TTm"
@@ -177,7 +311,7 @@
         persistence <- TRUE#FALSE
 
         # Checking wetterturnier RMSE from some good players
-        get_wetterturnier_fcst(param, stn, "Georg")
+        georg <- get_wetterturnier_fcst(param, stn, "Georg")
         get_wetterturnier_fcst(param, stn, "adri_der_pinner")
         get_wetterturnier_fcst(param, stn, "DWD-MOS-Mix")
         get_wetterturnier_fcst(param, stn, "DWD-EZ-Mos")
@@ -185,13 +319,6 @@
         data <- load_GFS(city, stp, obsparam, obshour, persistence)
         print(head(data[,1:3]))
 
-        x <- data[,grep("^(obs|C.t[0-9]+m?)$", names(data))]
-        par(mfrow = c(2,3))
-        for ( i in 2:ncol(x) ) {
-            cat(sprintf("%-10s  %10.5f\n", names(x)[i], cor(x[,1], x[,i])))
-            plot(x[,1], x[,i], main = names(x)[i])
-        }
-        
         idx <- which(apply(data, 2, function(x) sum(is.na(x)) / length(x)) > .1)
         if ( length(idx) > 0 ) data <- data[,-idx]
         
@@ -204,6 +331,23 @@
         print(sqrt(mean((f-y)^2)))
         f1 <- zoo(f, index(data))
         print(tail(f1,10))
+
+
+        # Compare to Georg
+        test <- subset(georg$bets, select = -day, day == floor(stp/24))
+        test <- merge(test, f1, data$obs, all = FALSE)
+        names(test) <- c("georg", "glmnet", "obs")
+
+        par(mfrow = c(1,3))
+        plot(test, screen = 1, col = 1:3)
+        legend("topleft", fill = 1:3, legend = names(test))
+        plot(georg ~ obs, data = test, main = sprintf("RMSE %.2f", sqrt(mean((test$georg-test$obs)^2))))
+        abline(0, 1, col = 2)
+        plot(glmnet ~ obs, data = test, main = sprintf("RMSE %.2f", sqrt(mean((test$glmnet-test$obs)^2))))
+        abline(0, 1, col = 2)
+
+
+
         stop()
         
         X2  <- X

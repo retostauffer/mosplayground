@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-06 17:13 on marvin
+# - L@ST MODIFIED: 2018-11-07 19:19 on marvin
 # -------------------------------------------------------------------
 
     rm(list=ls())
@@ -143,6 +143,7 @@
                   station = "IBK", mc.cores = 3)
     
     
+    cat("\n\n       That's the end my friend!\n\n")
     combine_zoo <- function(stn, x, step) {
         data <- list()
         for ( rec in x ) {

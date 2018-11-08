@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-06 07:52 on marvin
+# - L@ST MODIFIED: 2018-11-08 08:23 on marvin
 # -------------------------------------------------------------------
 
 
@@ -269,12 +269,14 @@ class synopmessage():
             "(\s9\S{4})?(\s333\s.*)?(?=\s[0-9]{3}\s)?.*?$", re.M) 
 
     # Regex expression to parse data from the clim block "333"
-    # 0.... 1sTTT 2sTTT 3EsTT 4E'sss 55SSS 2FFFF 3FFFF 4FFFF 553SS 2FFFF 3FFFF 4FFFF 6RRRt 7RRRR 8NChh 9SSss 
+    # 0.... 1sTTT 2sTTT 3EsTT 4E'sss 55SSS 2FFFF 3FFFF 4FFFF 553SS 2FFFF
+    # 3FFFF 4FFFF 6RRRt 7RRRR 8NChh 9SSss 
     rd   = "(\s0\S{4})?(\s1\S{4})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?" + \
-           "(\s55[^3\S]{3})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s553\S{2})?" + \
+           "(\s55[^3][\S]{2})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s553\S{2})?" + \
            "(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s6\S{4})?(\s7\S{4})?"
     rd89 = "(\s[89].*)?"
     regex333 = re.compile("^333" + rd + rd89 + "(?=\s[0-9]{3}\s)?.*?$")
+    print("^333" + rd + rd89 + "(?=\s[0-9]{3}\s)?.*?$")
 
     # Parsing 8/9 blocks
     regex89 = re.compile("([89].{4}\s?)")
@@ -585,6 +587,7 @@ class synopmessage():
 
 
     # ----------------------
+    # Message which is unused in FM-12 format
     def _decode_333_0XXXX(self, x):
         # Unused
         return
@@ -636,9 +639,8 @@ class synopmessage():
         self._sunday = None
         if len(x) == 0: return
         # Convert to minutes (what's delivered by BUFR)
-        print(x)
         if not x[2:] == "///":
-            self._sunday = int(x[2:]) / 10 * 60
+            self._sunday = int(x[2:]) * 360 # 10 * 3600
 
     # ----------------------
     def _decode_333_2FFFF(self, x):
@@ -664,7 +666,7 @@ class synopmessage():
         if len(x) == 0: return
         # Convert to minutes (what's delivered by BUFR)
         if not x[3:] == "//":
-            self._sun = int(x[3:]) / 10 * 60
+            self._sun = int(x[3:]) * 360 #/ 10 * 3600
 
     # ----------------------
     def _decode_333_6RRRt(self, x):
@@ -853,7 +855,7 @@ if __name__ == "__main__":
                         "p", "pmsl", "pch", "ptend",
                         "dd", "ff", "ffx", "ffinst",
                         "rr6", "rr12", "rr24",
-                        "ww", "W1", "W2", "sun", "sunday"]
+                        "ww", "W1", "W2", "sun", "sunday", "N"]
             data = []
             for rec in messages():
                 data.append(rec.get_tuple(colnames))
