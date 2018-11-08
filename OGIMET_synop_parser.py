@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-08 08:23 on marvin
+# - L@ST MODIFIED: 2018-11-08 23:51 on marvin
 # -------------------------------------------------------------------
 
 
@@ -276,7 +276,6 @@ class synopmessage():
            "(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s6\S{4})?(\s7\S{4})?"
     rd89 = "(\s[89].*)?"
     regex333 = re.compile("^333" + rd + rd89 + "(?=\s[0-9]{3}\s)?.*?$")
-    print("^333" + rd + rd89 + "(?=\s[0-9]{3}\s)?.*?$")
 
     # Parsing 8/9 blocks
     regex89 = re.compile("([89].{4}\s?)")
@@ -310,7 +309,7 @@ class synopmessage():
         self._datetime  = dt.datetime.strptime(x[1], "%Y,%m,%d,%H,%M")
         self._datumsec  = int(self._datetime.strftime("%s"))
 
-        self._decode_YYGGggi(x[3])
+        self._decode_YYGGggi(x[2])
         self._decode_message(x[4])
 
     def __repr__(self):
@@ -693,11 +692,11 @@ class synopmessage():
             if x[:3] == "910":
                 self._ffinst = int(x[3:])
                 if self._knots:
-                    self._ffinst = int(float(self._ffinst) * 0.5144447)
+                    self._ffx = int(float(self._ffinst) * 0.5144447)
             elif x[:3] == "911":
                 self._ffx    = int(x[3:])
                 if self._knots:
-                    self._ffx = int(float(self._ffx) * 0.5144447)
+                    self._ffinst = int(float(self._ffx) * 0.5144447)
 
 
 
