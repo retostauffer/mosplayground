@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-05 10:08 on marvin
+# - L@ST MODIFIED: 2018-11-06 07:52 on marvin
 # -------------------------------------------------------------------
 
 
@@ -813,7 +813,10 @@ if __name__ == "__main__":
             # Download file if required
             if not os.path.isfile(synfile):
                 print("Downloading data from OGIMET CGI")
-                print("  - Year/Month {:d}/{:02d}, station {:d}".format(year, mon, args["station"]))
+                if not args["latest"]:
+                    print("  - Year/Month {:d}/{:02d}, station {:d}".format(year, mon, args["station"]))
+                else:
+                    print("  - Latest {:d} days for {:d}".format(args["latest"], args["station"]))
                 print("  - URL: {:s}".format(url))
 
                 import urllib2
@@ -857,8 +860,10 @@ if __name__ == "__main__":
 
 
             # Development output
-            show_tab(colnames, data, n = 5)
-
+            if not args["latest"]:
+                show_tab(colnames, data, n = 5)
+            else:
+                show_tab(colnames, data)
 
             # Define and open sqlite3 database
             sql3file = "obs_{:d}.sqlite3".format(args["station"])
@@ -870,7 +875,7 @@ if __name__ == "__main__":
             if args["latest"]:
                 from os import remove
                 remove(synfile)
-                break
+                sys.exit(0)
 
 
 

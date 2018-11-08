@@ -22,7 +22,7 @@ equation
 # -------------------------------------------------------------------
 
 # Accumulated large scale precipitation 
-<s>.alpcp      <-   <s>.apcp + <s>.acpcp
+<s>.alpcp      <-   <s>.apcp - <s>.acpcp
 
 # Potential temperature: please keep in mind that msl (mean
 # sea level pressure) for surface pressure is in Pascal!

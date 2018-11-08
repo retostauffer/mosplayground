@@ -7,7 +7,7 @@ TCDC_highcloudlayer;          hcc
 TCDC_lowcloudlayer;           lcc 
 TCDC_middlecloudlayer;        mcc
 TCDC_convectivecloudlayer;    ccc
-TCDC_entireatmosphere;        tcdc
+TCDC_entireatmosphere;        tcc
 PRES_surface;                 psfc
 PRMSL_meansealevel;           pmsl
 
