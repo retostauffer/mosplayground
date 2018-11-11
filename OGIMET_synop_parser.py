@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-08 23:51 on marvin
+# - L@ST MODIFIED: 2018-11-10 11:19 on marvin
 # -------------------------------------------------------------------
 
 
@@ -401,13 +401,30 @@ class synopmessage():
         self._ir = None
         self._ix = None
         self._h  = None
-        self._vv = None
+        self._VV = None
         if len(x) == 0: return
         # Else decode
         self._ir = int(x[0])
         self._ix = int(x[1])
         self._h  = None if x[2]  == "/"  else int(x[2])
-        self._VV = None if x[3:] == "//" else int(x[3:])
+        if not x[3:] == "//":
+            tmp = int(x[3:])
+            if tmp <= 50:
+                self._VV = tmp
+            elif tmp <= 80:
+                self._VV = (tmp - 50) * 10
+            elif tmp <= 89:
+                self._VV = (tmp - 80) * 5 + 30
+            elif tmp in [90,91]:  self._VV = 0
+            elif tmp == 92:       self._VV = 2
+            elif tmp == 93:       self._VV = 5
+            elif tmp == 94:       self._VV = 10
+            elif tmp == 94:       self._VV = 10
+            elif tmp == 95:       self._VV = 20
+            elif tmp == 96:       self._VV = 40
+            elif tmp == 97:       self._VV = 100
+            elif tmp == 98:       self._VV = 200
+            elif tmp == 99:       self._VV = 500
 
     # ----------------------
     def _decode_Nddff(self, x):
@@ -677,8 +694,12 @@ class synopmessage():
 
     # ----------------------
     def _decode_333_89blocks(self, x):
-        self._ffx    = None
-        self._ffinst = None
+        self._ffx     = None
+        self._ffmin6  = None
+        self._ffmean6 = None
+        self._ffmax6  = None
+        self._ff6     = None
+        self._ffx6    = None
         if len(x) == 0: return
         tmp = self.regex89.findall(x)
         if len(tmp[0]) == 0: return
@@ -690,13 +711,26 @@ class synopmessage():
         #          seit dem letzten synoptischen Haupttermin (> 10,5 m/s)
         for x in tmp:
             if x[:3] == "910":
-                self._ffinst = int(x[3:])
+                self._ffx = int(x[3:])
                 if self._knots:
-                    self._ffx = int(float(self._ffinst) * 0.5144447)
+                    self._ffx = int(float(self._ffx) * 0.5144447)
+                print self._ffx
             elif x[:3] == "911":
-                self._ffx    = int(x[3:])
+                self._ffx6 = int(x[3:])
                 if self._knots:
-                    self._ffinst = int(float(self._ffx) * 0.5144447)
+                    self._ffx6 = int(float(self._ffx6) * 0.5144447)
+            elif x[:3] == "912":
+                self._ffmax6 = int(x[3:])
+                if self._knots:
+                    self._ffmax6  = int(float(self._ffmax6) * 0.5144447)
+            elif x[:3] == "913":
+                self._ffmean6 = int(x[3:])
+                if self._knots:
+                    self._ffmean6  = int(float(self._ffmean6) * 0.5144447)
+            elif x[:3] == "914":
+                self._ffmin6 = int(x[3:])
+                if self._knots:
+                    self._ffmin6  = int(float(self._ffmin6) * 0.5144447)
 
 
 
@@ -852,9 +886,9 @@ if __name__ == "__main__":
             # For database: generate a column vector and fetch data
             colnames = ["datumsec", "T", "Td", "Tmin12", "Tmax12",
                         "p", "pmsl", "pch", "ptend",
-                        "dd", "ff", "ffx", "ffinst",
                         "rr6", "rr12", "rr24",
-                        "ww", "W1", "W2", "sun", "sunday", "N"]
+                        "VV", "ww", "W1", "W2", "sun", "sunday", "N",
+                        "dd", "ff", "ffx", "ffmin6", "ffmean6", "ffmax6", "ff6", "ffx6"]
             data = []
             for rec in messages():
                 data.append(rec.get_tuple(colnames))
@@ -862,7 +896,7 @@ if __name__ == "__main__":
 
             # Development output
             if not args["latest"]:
-                show_tab(colnames, data, n = 5)
+                show_tab(colnames, data)#, n = 5)
             else:
                 show_tab(colnames, data)
 

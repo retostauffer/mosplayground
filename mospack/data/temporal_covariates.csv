@@ -102,6 +102,13 @@ step1; step2; varname
   -3 ;   3  ; <s>.mcc
    0 ;   3  ; <s>.mcc
 
+  -6 ;   0  ; <s>.hcc
+  -6 ;   6  ; <s>.hcc
+   0 ;   6  ; <s>.hcc
+  -3 ;   0  ; <s>.hcc
+  -3 ;   3  ; <s>.hcc
+   0 ;   3  ; <s>.hcc
+
   -6 ;   0  ; <s>.tcc
   -6 ;   6  ; <s>.tcc
    0 ;   6  ; <s>.tcc

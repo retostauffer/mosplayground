@@ -4,7 +4,7 @@ Title: Some codes and snippets for the mosplayground project.
 Version: 0.0-1
 Date: 2018-10-05
 Authors@R: c(person(given = "Reto",family = "Stauffer", role = c("aut", "cre"), email = "Reto.Stauffer@uibk.ac.at"))
-Imports: sp, zoo
+Imports: sp, zoo, RSQLite, glmnet, data.table
 Depends: glmnet
 Description: Just a small R working package.
 License: GPL-2 | GPL-3

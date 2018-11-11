@@ -31,7 +31,7 @@ x$diffpmsl_SN     <- x$S.pmsl   - x$N.pmsl
 x$diffpmsl_WE     <- x$W.pmsl   - x$E.pmsl 
 x$diffpmsl_WC     <- x$W.pmsl   - x$C.pmsl
 x$diffpmsl_CE     <- x$C.pmsl   - x$E.pmsl
-x$diffpmsl_CNN    <- x$C.pmsl   - x$NN.pmsl
+x$diffpmsl_CN     <- x$C.pmsl   - x$N.pmsl
 x$diffpmsl_SWNE   <- x$SW.pmsl  - x$NE.pmsl
 x$diffpmsl_SENW   <- x$SE.pmsl  - x$NE.pmsl
 
@@ -39,10 +39,10 @@ x$diffpmsl_SENW   <- x$SE.pmsl  - x$NE.pmsl
 x$diffpsfc_CN     <- x$C.psfc   - x$N.psfc
 x$diffpsfc_SC     <- x$S.psfc   - x$C.psfc
 x$diffpsfc_SN     <- x$S.psfc   - x$N.psfc 
-x$diffpsfc_WE     <- x$W.psfc  - x$E.psfc 
-x$diffpsfc_WC     <- x$W.psfc  - x$C.psfc 
-x$diffpsfc_CE     <- x$C.psfc  - x$E.psfc 
-x$diffpsfc_CNN    <- x$C.psfc   - x$NN.psfc
+x$diffpsfc_WE     <- x$W.psfc   - x$E.psfc 
+x$diffpsfc_WC     <- x$W.psfc   - x$C.psfc 
+x$diffpsfc_CE     <- x$C.psfc   - x$E.psfc 
+x$diffpsfc_CN     <- x$C.psfc   - x$N.psfc
 x$diffpsfc_SWNE   <- x$SW.psfc  - x$NE.psfc
 x$diffpsfc_SENW   <- x$SE.psfc  - x$NE.psfc
 
@@ -53,7 +53,7 @@ x$difftheta700_SN     <- x$S.theta700   - x$N.theta700
 x$difftheta700_WE     <- x$W.theta700   - x$E.theta700
 x$difftheta700_WC     <- x$W.theta700   - x$C.theta700
 x$difftheta700_CE     <- x$C.theta700   - x$E.theta700
-x$difftheta700_CNN    <- x$C.theta700   - x$NN.theta700
+x$difftheta700_CN     <- x$C.theta700   - x$N.theta700
 x$difftheta700_SWNE   <- x$SW.theta700  - x$NE.theta700
 x$difftheta700_SENW   <- x$SE.theta700  - x$NE.theta700
 
@@ -64,7 +64,7 @@ x$difftheta850_SN     <- x$S.theta850   - x$N.theta850
 x$difftheta850_WE     <- x$W.theta850   - x$E.theta850
 x$difftheta850_WC     <- x$W.theta850   - x$C.theta850
 x$difftheta850_CE     <- x$C.theta850   - x$E.theta850
-x$difftheta850_CNN    <- x$C.theta850   - x$NN.theta850
+x$difftheta850_CN     <- x$C.theta850   - x$N.theta850
 x$difftheta850_SWNE   <- x$SW.theta850  - x$NE.theta850
 x$difftheta850_SENW   <- x$SE.theta850  - x$NE.theta850
 
@@ -76,7 +76,7 @@ x$difftheta700_850_SN     <- x$S.theta700_850   - x$N.theta700_850
 x$difftheta700_850_WE     <- x$W.theta700_850   - x$E.theta700_850
 x$difftheta700_850_WC     <- x$W.theta700_850   - x$C.theta700_850
 x$difftheta700_850_CE     <- x$C.theta700_850   - x$E.theta700_850
-x$difftheta700_850_CNN    <- x$C.theta700_850   - x$NN.theta700_850
+x$difftheta700_850_CN     <- x$C.theta700_850   - x$N.theta700_850
 x$difftheta700_850_SWNE   <- x$SW.theta700_850  - x$NE.theta700_850
 x$difftheta700_850_SENW   <- x$SE.theta700_850  - x$NE.theta700_850
 

@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-07 19:19 on marvin
+# - L@ST MODIFIED: 2018-11-11 20:37 on marvin
 # -------------------------------------------------------------------
 
     rm(list=ls())
@@ -133,15 +133,18 @@
 # Interpolate data now
 # ---------------------------------------------------------------------
     # Testing
-    #testfile <- "netcdf/GFS_20181106_0000_combined.nc"
-    #message(sprintf("Reading %s\n\n", testfile))
-    #x <- ipfun(testfile, stations = stations, station = "IBK", stoponerror = TRUE)
-    #stop('-dev-')
+    ##library("devtools")
+    ##load_all("mospack")
+    ##testfile <- "netcdf/GFS_20181106_0000_combined.nc"
+    ##message(sprintf("Reading %s\n\n", testfile))
+    ##x <- ipfun(testfile, stations = stations, stoponerror = TRUE)
+    ###stop('-dev-')
 
     # Interpolate on three cores ...
     x <- mclapply(ncfiles, FUN = ipfun, stations = stations,
                   station = "IBK", mc.cores = 3)
     
+    stop("End of interpolation")
     
     cat("\n\n       That's the end my friend!\n\n")
     combine_zoo <- function(stn, x, step) {

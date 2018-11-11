@@ -46,7 +46,7 @@ while [ $hours -lt 1 ] || [ $hours -gt 24 ] ; do
 done
 
 date=`date -u -d "${year}-${month}-${day} ${hour}:00"`
-let lag=$hour-1
+let lag=$hours-1
 while [ $lag -ge 0 ] ; do
     pat=`date -u -d "${date} ${lag} hours ago" "+%Y,%m,%d,%H"`
 

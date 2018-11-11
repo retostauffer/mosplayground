@@ -9,7 +9,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-02, RS: Created file on pc24-c707.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-05 09:48 on marvin
+# - L@ST MODIFIED: 2018-11-09 16:12 on marvin
 # -------------------------------------------------------------------
 
 
@@ -92,8 +92,13 @@ if __name__ == "__main__":
       date = re.findall("^" + gribdir + "/([0-9]{12})$", directory)
       date = dt.datetime.strptime(date[0], "%Y%m%d%H%M")
 
-      print("* Processing GFS run {:s}".format(date.strftime("%Y-%m-%d %H UTC")))
+      print("* Processing GFS run {:s}".format(date.strftime("%Y-%m-%d %H UTC"))),
       ncfile = get_netcdf_file_name(ncdir, date)
+
+      if os.path.isfile(ncfile):
+          print("... exists, skip")
+          continue
+      else: print("")
 
       # What we have to do:
       # (1) Find all grb2 files matching our pattern
