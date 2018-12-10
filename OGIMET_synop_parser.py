@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-10 11:19 on marvin
+# - L@ST MODIFIED: 2018-12-10 17:04 on marvin
 # -------------------------------------------------------------------
 
 
@@ -176,7 +176,7 @@ class read_obs_config():
         # Trying to create output dir
         if not os.path.isdir(self.get("htmldir")):
             try:
-                os.makedirs(self._sqlite3dir)
+                os.makedirs(self._htmldir)
             except Exception as e:
                 raise Exception(e)
 
@@ -203,7 +203,7 @@ class get_synop_messages():
 
     # Extracting valid synop messages, pick date information.
     #                     stn        date           YYGGggi  stn    message
-    regex = re.compile("^([0-9]+),([0-9,]{16}),AAXX\s(.{5})\s([0-9]+)\s(.*)=$", re.M)
+    regex = re.compile("^([0-9]+),([0-9,]{16}),AAXX\s(.{5})\s([0-9]+)\s([^=.*])[=]+$", re.M)
 
     def __init__(self, file, verbose = False):
         """get_synop_messages(file, verbose = False)
@@ -391,7 +391,9 @@ class synopmessage():
         # I am only interested in the last piece which defines
         # whether the wind speed observations are in knots or
         # meters per second.
-        if int(x[4]) in [0, 1]:
+        if x[4] == "/":
+            self._knots = None # No information about wind speed obs!
+        elif int(x[4]) in [0, 1]:
             self._knots = False
         else:
             self._knots = True
@@ -436,14 +438,20 @@ class synopmessage():
         if not x[1:3] == "//":
             self._dd  = int(x[1:3])
         if not x[3:] == "//":
-            self._ff  = int(x[3:])
+            self._ff  = int(x[3:]) * 10
+            if self._knots is None:
+                raise Exception("YYGGggi did not provide any wind speed units, but now " + \
+                        "wind speed in Nddff has been found! That's not good. Stop.")
             if self._knots:
                 self._ff = int(float(self._ff) * 0.5144447)
 
     # ----------------------
     def _decode_00fff(self, x): 
         if len(x) == 0: return
-        self._ff  = int(x[2:]) # Overwrites self._ff of Nddff if set
+        self._ff  = int(x[2:]) * 10# Overwrites self._ff of Nddff if set
+        if self._knots is None:
+            raise Exception("YYGGggi did not provide any wind speed units, but now " + \
+                    "wind speed in 00fff has been found! That's not good. Stop.")
         if self._knots:
             self._ff = int(float(self._ff) * 0.5144447)
 
@@ -710,25 +718,27 @@ class synopmessage():
         # 912ff -- Hoechstes 10-Minuten-Mittel der Windgeschwindigkeit
         #          seit dem letzten synoptischen Haupttermin (> 10,5 m/s)
         for x in tmp:
+            if self._knots is None:
+                raise Exception("YYGGggi did not provide any wind speed units, but now " + \
+                        "wind speed in {:s} has been found! That's not good. Stop.".format(x[:3]))
             if x[:3] == "910":
-                self._ffx = int(x[3:])
+                self._ffx = int(x[3:]) * 10
                 if self._knots:
                     self._ffx = int(float(self._ffx) * 0.5144447)
-                print self._ffx
             elif x[:3] == "911":
-                self._ffx6 = int(x[3:])
+                self._ffx6 = int(x[3:]) * 10
                 if self._knots:
                     self._ffx6 = int(float(self._ffx6) * 0.5144447)
             elif x[:3] == "912":
-                self._ffmax6 = int(x[3:])
+                self._ffmax6 = int(x[3:]) * 10
                 if self._knots:
                     self._ffmax6  = int(float(self._ffmax6) * 0.5144447)
             elif x[:3] == "913":
-                self._ffmean6 = int(x[3:])
+                self._ffmean6 = int(x[3:]) * 10
                 if self._knots:
                     self._ffmean6  = int(float(self._ffmean6) * 0.5144447)
             elif x[:3] == "914":
-                self._ffmin6 = int(x[3:])
+                self._ffmin6 = int(x[3:]) * 10
                 if self._knots:
                     self._ffmin6  = int(float(self._ffmin6) * 0.5144447)
 
@@ -814,7 +824,7 @@ if __name__ == "__main__":
         sys.exit(" --- development stop (--testfile) ---- ")
 
     # The year ...
-    for year in range(2016, int(dt.date.today().strftime("%Y")) + 1):
+    for year in range(2014, int(dt.date.today().strftime("%Y")) + 1):
 
         for mon in range(1, 13):
 
@@ -863,6 +873,11 @@ if __name__ == "__main__":
     
                     uid = urllib2.urlopen(url)
                     content = uid.readlines()
+                    if len(content) == 0:
+                        print("    No data for this request, create empy file")
+                        fid = open(synfile, "w")
+                        fid.close()
+                        break;
                     uid.close()
                     # If we overstressed ogimet: do not save, sleep 1 minute,
                     # and try again.

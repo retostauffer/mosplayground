@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-05, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-11 19:59 on marvin
+# - L@ST MODIFIED: 2018-12-09 18:55 on marvin
 # -------------------------------------------------------------------
 
     rm(list = ls())
@@ -15,66 +15,26 @@
     library("mospack")
 
 
-# --------------------------------------------------------------
-# --------------------------------------------------------------
-# --------------------------------------------------------------
-# --------------------------------------------------------------
-# --------------------------------------------------------------
-    combine_hour <- function(obs, dmo, killneighbours = FALSE, scale = FALSE) {
-        # Killing neighbours?
-        if ( killneighbours ) {
-            idx <- grep("^(N|NE|NW|W|SW|S|SE|E|NE)+\\..*$", names(dmo))
-            if ( length(idx) > 0 ) dmo <- dmo[,-idx]
-        }
-        # Do we have to standartize?
-        if ( scale ) {
-            for ( i in 1:ncol(dmo) ) dmo[,i] <- scale(dmo[,i])
-        }
-        # Merging data
-        data <- na.omit(merge(obs, dmo))
-        names(data)[1L] <- "obs"
-        cat(sprintf("Dimension of combined data set      %5d x %5d\n", nrow(data), ncol(data)))
-        return(data)
-    }
-
-
-    combine <- function(obs, dmo, killneighbours = FALSE, scale = FALSE) {
-        obs_hour <- unique(as.POSIXlt(index(obs))$hour)
-        if ( length(obs_hour) != 1 ) stop("obs contains multiple hours")
-        dmo_hour <- unique(as.POSIXlt(index(dmo))$hour)
-        if ( length(dmo_hour) != 1 ) stop("dmo contains multiple hours")
-        index(dmo) <- index(dmo) + 3600 * (obs_hour - dmo_hour)
-        # Killing neighbours?
-        if ( killneighbours ) {
-            idx <- grep("^(N|NE|NW|W|SW|S|SE|E|NE)+\\..*$", names(dmo))
-            if ( length(idx) > 0 ) dmo <- dmo[,-idx]
-        }
-        # Do we have to standartize?
-        if ( scale ) {
-            for ( i in 1:ncol(dmo) ) dmo[,i] <- scale(dmo[,i])
-        }
-        # Merging data
-        data <- na.omit(merge(obs, dmo))
-        names(data)[1L] <- "obs"
-        cat(sprintf("Dimension of combined data set      %5d x %5d\n", nrow(data), ncol(data)))
-        return(data)
-    }
+    library("devtools")
+    load_all("mospack")
 
 # --------------------------------------------------------------
 # --------------------------------------------------------------
 # --------------------------------------------------------------
 # --------------------------------------------------------------
 # --------------------------------------------------------------
+
 
     # Loading GFS data (once)
-    cached_file <- "rds/prepared_GFS_%s.rds"
+    station <- "IBK"
+    cached_file <- sprintf("rds/prepared_GFS_%s.rds", station)
     if ( file.exists(cached_file) ) {
         cat(sprintf("[!] Reading cached file \"%s\"\n", cached_file))
         GFS <- readRDS(cached_file)
     } else {
         cat("[!] Prepare GFS (takes some seconds)\n")
-        GFS <- GFS_load("IBK")
-        cat("    Save prepared file as \"%s\"\n", cached_file)
+        GFS <- GFS_load(station)
+        cat(sprintf("    Save prepared file as \"%s\"\n", cached_file))
         saveRDS(GFS, cached_file)
     }
     # Kill those I don't want to have
@@ -83,10 +43,10 @@
 
     # Latest GFS Forecast
     files  <- list.files("rds")
-    files  <- files[grep("^GFS_[0-9]{8}_0000_IBK.rds", files)]
-    latest <- max(as.Date(strptime(files, "GFS_%Y%m%d_%H%M_IBK.rds")))
+    files  <- files[grep("^GFS_[0-9]{8}_0000.rds", files)]
+    latest <- max(as.Date(strptime(files, "GFS_%Y%m%d_%H%M.rds")))
     cat(sprintf("Latest GFS forecast interpolated and available: %s\n", latest))
-    GFS_latest <- GFS_load("IBK", dates = latest) 
+    GFS_latest <- GFS_load(station, dates = latest) 
     GFS_latest <- GFS_latest[which(names(GFS_latest) %in% take)]
 
 # --------------------------------------------------------------
@@ -102,7 +62,7 @@
     TTm <- get_observations("TTm", 11120)
     #TTm_pers <- lag(TTm, -2)
     #head(merge(TTm, TTm_pers))
-    prep <- lapply(GFS, combine, obs = TTm, killneighbours = TRUE, scale = FALSE)
+    prep <- lapply(GFS, combine_obs_GFS, obs = TTm, killneighbours = TRUE, scale = FALSE)
 
     # The steps for which we need the prediction(s)
     TTm_steps  <- c(24 + c(9, 12, 15, 18), 48 + c(9, 12, 15, 18))
@@ -114,67 +74,180 @@
     TTm_mods <- lapply(TTm_steps, modelfun, prep = prep, result = "both")
 
     sc <- do.call(rbind, lapply(TTm_mods, function(x) unlist(x$scores)))
-    print(round(sc, 2))
-
+    print(round(sc, 4))
 
     # Kommt nicht wirklich an die stability selection ran
-    #library("devtools")
-    #load_all("mospack")
-    #x <- stepwise_lm(obs ~ ., data = prep$step_36, result = "both")
+    ##library("devtools")
+    ##load_all("mospack")
+    ##x <- stepwise_lm(obs ~ ., data = prep$step_36, result = "both")
 
     fcst <- matrix(NA, ncol = 2, nrow = 6, dimnames = list(NULL, c("day1", "day2")))
-    fcst[1,"day1"] <- predict(TTm_mods$step_33, newdata = GFS_latest$step_33)
-    fcst[2,"day1"] <- predict(TTm_mods$step_36, newdata = GFS_latest$step_36)
-    fcst[3,"day1"] <- predict(TTm_mods$step_39, newdata = GFS_latest$step_39)
-    fcst[4,"day1"] <- predict(TTm_mods$step_42, newdata = GFS_latest$step_42)
+    fcst[1,"day1"] <- predict(TTm_mods$step_33$model, newdata = GFS_latest$step_33)
+    fcst[2,"day1"] <- predict(TTm_mods$step_36$model, newdata = GFS_latest$step_36)
+    fcst[3,"day1"] <- predict(TTm_mods$step_39$model, newdata = GFS_latest$step_39)
+    fcst[4,"day1"] <- predict(TTm_mods$step_42$model, newdata = GFS_latest$step_42)
     fcst[5,"day1"] <- mean(fcst[1:4,"day1"])
     fcst[6,"day1"] <- max(fcst[1:4,"day1"])
 
-    fcst[1,"day2"] <- predict(TTm_mods$step_57, newdata = GFS_latest$step_57)
-    fcst[2,"day2"] <- predict(TTm_mods$step_60, newdata = GFS_latest$step_60)
-    fcst[3,"day2"] <- predict(TTm_mods$step_63, newdata = GFS_latest$step_63)
-    fcst[4,"day2"] <- predict(TTm_mods$step_66, newdata = GFS_latest$step_66)
+    fcst[1,"day2"] <- predict(TTm_mods$step_57$model, newdata = GFS_latest$step_57)
+    fcst[2,"day2"] <- predict(TTm_mods$step_60$model, newdata = GFS_latest$step_60)
+    fcst[3,"day2"] <- predict(TTm_mods$step_63$model, newdata = GFS_latest$step_63)
+    fcst[4,"day2"] <- predict(TTm_mods$step_66$model, newdata = GFS_latest$step_66)
     fcst[5,"day2"] <- mean(fcst[1:4,"day2"])
     fcst[6,"day2"] <- max(fcst[1:4,"day2"])
 
 
-    ##### Just testig whether a subset of N ranodm covariates may yield better results
-    ##### Just a test
-    ####random <- function(data, ...) {
-    ####    idx <- c(1, sample(2:ncol(data), 50))
-    ####    return(stabsel(obs ~ ., data = data[,idx],  n = 20, q = 30, train = .8, result = "both"))
-    ####}
-    ####library("parallel")
-    ####test_random <- mclapply(1:200, random, data = prep$step_36, mc.cores = 3)
-    ####res_random <- do.call(rbind, lapply(test_random, function(x) unlist(x$score)))
-    ##### Target
-    ####target <- unlist(TTm_mods$step_36$score); print(target)
-    ####sum(res_random[,"RMSE"] < target["RMSE"])
+
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+
+    library("devtools")
+    load_all("mospack")
+
+    TEMP <- get_observations_raw("t", 11120)
+
+    prep <- lapply(GFS, combine_obs_GFS_hourly, obs = TEMP, killneighbours = TRUE, scale = FALSE)
+
+    # Subsetting data
+    ydays <- as.POSIXlt(latest)$yday + seq(-40, 40)
+    ydays[ydays <   0] <- ydays[ydays <   0] + 365
+    ydays[ydays > 365] <- ydays[ydays > 365] - 365
+
+    subsetfun <- function(x, ydays) {
+        tmp <- as.POSIXlt(index(x))$yday
+        x[which(tmp %in% ydays),]
+    }
+    prep <- lapply(prep, subsetfun, ydays = ydays)
 
 
-    ##data36 <- prep$step_36
-    ##data60 <- prep$step_60
-    ##n <- 50
-    ##q <- 30
-    ##train <- .5
-    ##library("devtools")
-    ##load_all("mospack")
-    ##x1 <- stabsel(obs ~ ., data = data36, n = n, q = q, train = train, result = "both")
-    ##x2 <- stabsel(obs ~ ., data = data60, n = n, q = q, train = train, result = "both")
+    # The steps for which we need the prediction(s)
+    TEMP_steps  <- structure(seq(18, 84, by = 3), names = sprintf("step_%02d", seq(18, 84, by = 3)))
+    modelfun <- function(stp, prep, result = "forecast") {
+        stabsel(obs ~ ., data = prep[[sprintf("step_%02d", stp)]], n = 20, q = 30, train = .8, result = result)
+    }
+    TEMP_mods <- lapply(TEMP_steps, modelfun, prep = prep, result = "both")
 
-    ##print(x1$scores)
-    ##print(x2$scores)
-    ##print(formula(x1$model))
-    ##print(formula(x2$model))
+    sc <- do.call(rbind, lapply(TEMP_mods, function(x) unlist(x$scores)))
+    print(round(sc, 4))
+    print(apply(sc, 2, mean))
 
-    ##ff1 <- cross.glmnet(formula(x1$model), data = data36)
-    ##ff2 <- cross.glmnet(formula(x2$model), data = data60)
-    ##ff3 <- cross.glmnet(obs ~ ., data = data36, s = "lambda.min")
-    ##ff4 <- cross.glmnet(obs ~ ., data = data60, s = "lambda.min")
-    ##sqrt(mean((data36$obs - ff1)^2))
-    ##sqrt(mean((data60$obs - ff2)^2))
-    ##sqrt(mean((data36$obs - ff3)^2))
-    ##sqrt(mean((data60$obs - ff4)^2))
+
+    # Prediction
+    fcstfun <- function(x, mods, latest) {
+        zoo(predict(mods[[x]]$model, newdata = latest[[x]]), index(latest[[x]]))
+    }
+    TEMP_fcst <- lapply(names(TEMP_mods), fcstfun, mods = TEMP_mods, latest = GFS_latest)
+    TEMP_fcst <- do.call(rbind, TEMP_fcst)
+
+    tmp_gfs <- do.call(rbind, lapply(GFS_latest, function(x) x$C.t2m)) - 273.15
+    x <- merge(TEMP, TEMP_fcst, tmp_gfs, all = FALSE)
+    plot(x, screen = 1, col = c(2,1,4))
+
+
+
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+
+    library("devtools")
+    load_all("mospack")
+
+    PRES <- get_observations_raw("pmsl", 11120)
+    PRES <- subset(PRES, PRES < 1000)
+
+    prep <- lapply(GFS, combine_obs_GFS_hourly, obs = PRES, killneighbours = TRUE, scale = FALSE)
+
+    # Subsetting data
+    ydays <- as.POSIXlt(latest)$yday + seq(-40, 40)
+    ydays[ydays <   0] <- ydays[ydays <   0] + 365
+    ydays[ydays > 365] <- ydays[ydays > 365] - 365
+
+    subsetfun <- function(x, ydays) {
+        tmp <- as.POSIXlt(index(x))$yday
+        x[which(tmp %in% ydays),]
+    }
+    prep <- lapply(prep, subsetfun, ydays = ydays)
+
+
+
+    # The steps for which we need the prediction(s)
+    PRES_steps  <- structure(seq(18, 84, by = 3), names = sprintf("step_%02d", seq(18, 84, by = 3)))
+    modelfun <- function(stp, prep, result = "forecast") {
+        stabsel(obs ~ ., data = prep[[sprintf("step_%02d", stp)]], n = 20, q = 30, train = .8, result = result)
+    }
+    PRES_mods <- lapply(PRES_steps, modelfun, prep = prep, result = "both")
+
+    sc <- do.call(rbind, lapply(PRES_mods, function(x) unlist(x$scores)))
+    print(round(sc, 4))
+    print(apply(sc, 2, mean))
+
+    # Prediction
+    fcstfun <- function(x, mods, latest) {
+        zoo(predict(mods[[x]]$model, newdata = latest[[x]]), index(latest[[x]]))
+    }
+    PRES_fcst <- lapply(names(PRES_mods), fcstfun, mods = PRES_mods, latest = GFS_latest)
+    PRES_fcst <- do.call(rbind, PRES_fcst)
+
+    tmp_gfs <- do.call(rbind, lapply(GFS_latest, function(x) x$C.pmsl)) / 100
+    x <- merge(PRES, PRES_fcst, tmp_gfs, all = FALSE)
+    plot(x, screen = 1, col = c(2,1,4))
+
+
+
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+
+    library("devtools")
+    load_all("mospack")
+
+    rain <- get_observations("RR", 11120)
+    pop  <- zoo(as.numeric(rain$rr6 >= 0), index(rain))
+
+    prep <- lapply(GFS, combine_obs_GFS_hourly, obs = pop, killneighbours = TRUE, scale = FALSE)
+
+    ## Subsetting data
+    #ydays <- as.POSIXlt(latest)$yday + seq(-40, 40)
+    #ydays[ydays <   0] <- ydays[ydays <   0] + 365
+    #ydays[ydays > 365] <- ydays[ydays > 365] - 365
+
+    #subsetfun <- function(x, ydays) {
+    #    tmp <- as.POSIXlt(index(x))$yday
+    #    x[which(tmp %in% ydays),]
+    #}
+    #prep <- lapply(prep, subsetfun, ydays = ydays)
+
+
+
+    # The steps for which we need the prediction(s)
+    POP_steps  <- structure(seq(18, 84, by = 6), names = sprintf("step_%02d", seq(18, 84, by = 6)))
+    modelfun <- function(stp, prep, result = "forecast") {
+        stabsel(obs ~ ., data = prep[[sprintf("step_%02d", stp)]], family = "binomial",
+                n = 20, q = 30, train = .8, result = result)
+    }
+    POP_mods <- lapply(POP_steps, modelfun, prep = prep, result = "both")
+
+#    sc <- do.call(rbind, lapply(PRES_mods, function(x) unlist(x$scores)))
+#    print(round(sc, 4))
+#    print(apply(sc, 2, mean))
+#
+#    # Prediction
+#    fcstfun <- function(x, mods, latest) {
+#        zoo(predict(mods[[x]]$model, newdata = latest[[x]]), index(latest[[x]]))
+#    }
+#    PRES_fcst <- lapply(names(PRES_mods), fcstfun, mods = PRES_mods, latest = GFS_latest)
+#    PRES_fcst <- do.call(rbind, PRES_fcst)
+#
+#    tmp_gfs <- do.call(rbind, lapply(GFS_latest, function(x) x$C.pmsl)) / 100
+#    x <- merge(PRES, PRES_fcst, tmp_gfs, all = FALSE)
+#    plot(x, screen = 1, col = c(2,1,4))
 
 
 
@@ -190,7 +263,7 @@
     PPP <- get_observations("PPP", 11120)
     #TTm_pers <- lag(TTm, -2)
     #head(merge(TTm, TTm_pers))
-    prep <- lapply(GFS, combine, obs = PPP, killneighbours = TRUE, scale = FALSE)
+    prep <- lapply(GFS, combine_obs_GFS, obs = PPP, killneighbours = TRUE, scale = FALSE)
 
     # The steps for which we need the prediction(s)
     PPP_steps  <- c(33, 36, 39, 57, 60, 63)
@@ -238,7 +311,7 @@
     TTd <- get_observations("TTd", 11120)
     #TTm_pers <- lag(TTm, -2)
     #head(merge(TTm, TTm_pers))
-    prep <- lapply(GFS, combine, obs = TTd, killneighbours = TRUE, scale = FALSE)
+    prep <- lapply(GFS, combine_obs_GFS, obs = TTd, killneighbours = TRUE, scale = FALSE)
 
     # The steps for which we need the prediction(s)
     TTd_steps  <- c(36, 60)
@@ -276,7 +349,7 @@
     N <- get_observations("N", 11120)
     #TTm_pers <- lag(TTm, -2)
     #head(merge(TTm, TTm_pers))
-    prep <- lapply(GFS, combine, obs = N, killneighbours = TRUE, scale = FALSE)
+    prep <- lapply(GFS, combine_obs_GFS, obs = N, killneighbours = TRUE, scale = FALSE)
 
     # The steps for which we need the prediction(s)
     N_steps  <- c(36, 60)
@@ -389,7 +462,7 @@
 ###    load_all("mospack")
 ###
 ###    temp <- get_observations_raw("T", 11120)
-###    prep <- lapply(GFS, combine_hour, obs = temp, killneighbours = TRUE, scale = FALSE)
+###    prep <- lapply(GFS, combine_obs_GFS_hourly, obs = temp, killneighbours = TRUE, scale = FALSE)
 ###
 ###    # The steps for which we need the prediction(s)
 ###    T_steps  <- seq(18, 84, by = 6)
@@ -459,7 +532,7 @@
     load_all("mospack")
 
     ff <- get_observations("ff", 11120)
-    prep <- lapply(GFS, combine, obs = ff, killneighbours = TRUE, scale = FALSE)
+    prep <- lapply(GFS, combine_obs_GFS, obs = ff, killneighbours = TRUE, scale = FALSE)
 
     # The steps for which we need the prediction(s)
     ff_steps  <- c(36, 60)
@@ -491,7 +564,7 @@
     load_all("mospack")
 
     fx <- get_observations("fx", 11120)
-    prep <- lapply(GFS, combine, obs = fx, killneighbours = TRUE, scale = FALSE)
+    prep <- lapply(GFS, combine_obs_GFS, obs = fx, killneighbours = TRUE, scale = FALSE)
 
     # The steps for which we need the prediction(s)
     fx_steps  <- c(36, 60)
@@ -545,7 +618,7 @@
     aggfun <- function(x) { if ( sum(!is.na(x)) == 0 ) { return(0) } else { max(x, na.rm = TRUE) } }
     ffx6 <- aggregate(ffx6, timefun, aggfun) 
 
-    prep <- lapply(GFS, combine_hour, obs = ffx6, killneighbours = TRUE, scale = FALSE)
+    prep <- lapply(GFS, combine_obs_GFS_hourly, obs = ffx6, killneighbours = TRUE, scale = FALSE)
 
     # The steps for which we need the prediction(s)
     fx_steps  <- seq(18, 84, by = 3)

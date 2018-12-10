@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-11 20:37 on marvin
+# - L@ST MODIFIED: 2018-11-12 07:48 on marvin
 # -------------------------------------------------------------------
 
     rm(list=ls())
@@ -141,29 +141,10 @@
     ###stop('-dev-')
 
     # Interpolate on three cores ...
-    x <- mclapply(ncfiles, FUN = ipfun, stations = stations,
-                  station = "IBK", mc.cores = 3)
+    x <- mclapply(ncfiles, FUN = ipfun, stations = stations, mc.cores = 1)
     
     stop("End of interpolation")
     
-    cat("\n\n       That's the end my friend!\n\n")
-    combine_zoo <- function(stn, x, step) {
-        data <- list()
-        for ( rec in x ) {
-            stp <- step
-            rec <- subset(rec[[stn]], step == stp)
-            if ( nrow(rec) == 0 ) next
-            data[[length(data)+1]] <- rec
-        }
-        print(table(sapply(data, ncol)))
-        data <- do.call(rbind, data)
-        # Delete empty cols
-        idx <- which(colSums(!is.na(data)) == 0)
-        if ( length(idx) > 0 ) data <- data[,-idx]
-        return(data)
-    }
-    data18 <- lapply(setNames(names(x[[1]]), names(x[[1]])), combine_zoo, x = x, step = 18)
-    u <- data18
 
 
 
