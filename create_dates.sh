@@ -1,5 +1,5 @@
 
-START="20161201"
+START="20190115"
 END=`date -u "+%Y%m%d" -d "1 days ago"`
 
 LOOPDATE=$START
