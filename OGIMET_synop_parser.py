@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-06 07:52 on marvin
+# - L@ST MODIFIED: 2018-12-10 17:04 on marvin
 # -------------------------------------------------------------------
 
 
@@ -176,7 +176,7 @@ class read_obs_config():
         # Trying to create output dir
         if not os.path.isdir(self.get("htmldir")):
             try:
-                os.makedirs(self._sqlite3dir)
+                os.makedirs(self._htmldir)
             except Exception as e:
                 raise Exception(e)
 
@@ -203,7 +203,7 @@ class get_synop_messages():
 
     # Extracting valid synop messages, pick date information.
     #                     stn        date           YYGGggi  stn    message
-    regex = re.compile("^([0-9]+),([0-9,]{16}),AAXX\s(.{5})\s([0-9]+)\s(.*)=$", re.M)
+    regex = re.compile("^([0-9]+),([0-9,]{16}),AAXX\s(.{5})\s([0-9]+)\s([^=.*])[=]+$", re.M)
 
     def __init__(self, file, verbose = False):
         """get_synop_messages(file, verbose = False)
@@ -269,9 +269,10 @@ class synopmessage():
             "(\s9\S{4})?(\s333\s.*)?(?=\s[0-9]{3}\s)?.*?$", re.M) 
 
     # Regex expression to parse data from the clim block "333"
-    # 0.... 1sTTT 2sTTT 3EsTT 4E'sss 55SSS 2FFFF 3FFFF 4FFFF 553SS 2FFFF 3FFFF 4FFFF 6RRRt 7RRRR 8NChh 9SSss 
+    # 0.... 1sTTT 2sTTT 3EsTT 4E'sss 55SSS 2FFFF 3FFFF 4FFFF 553SS 2FFFF
+    # 3FFFF 4FFFF 6RRRt 7RRRR 8NChh 9SSss 
     rd   = "(\s0\S{4})?(\s1\S{4})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?" + \
-           "(\s55[^3\S]{3})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s553\S{2})?" + \
+           "(\s55[^3][\S]{2})?(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s553\S{2})?" + \
            "(\s2\S{4})?(\s3\S{4})?(\s4\S{4})?(\s6\S{4})?(\s7\S{4})?"
     rd89 = "(\s[89].*)?"
     regex333 = re.compile("^333" + rd + rd89 + "(?=\s[0-9]{3}\s)?.*?$")
@@ -308,7 +309,7 @@ class synopmessage():
         self._datetime  = dt.datetime.strptime(x[1], "%Y,%m,%d,%H,%M")
         self._datumsec  = int(self._datetime.strftime("%s"))
 
-        self._decode_YYGGggi(x[3])
+        self._decode_YYGGggi(x[2])
         self._decode_message(x[4])
 
     def __repr__(self):
@@ -390,7 +391,9 @@ class synopmessage():
         # I am only interested in the last piece which defines
         # whether the wind speed observations are in knots or
         # meters per second.
-        if int(x[4]) in [0, 1]:
+        if x[4] == "/":
+            self._knots = None # No information about wind speed obs!
+        elif int(x[4]) in [0, 1]:
             self._knots = False
         else:
             self._knots = True
@@ -400,13 +403,30 @@ class synopmessage():
         self._ir = None
         self._ix = None
         self._h  = None
-        self._vv = None
+        self._VV = None
         if len(x) == 0: return
         # Else decode
         self._ir = int(x[0])
         self._ix = int(x[1])
         self._h  = None if x[2]  == "/"  else int(x[2])
-        self._VV = None if x[3:] == "//" else int(x[3:])
+        if not x[3:] == "//":
+            tmp = int(x[3:])
+            if tmp <= 50:
+                self._VV = tmp
+            elif tmp <= 80:
+                self._VV = (tmp - 50) * 10
+            elif tmp <= 89:
+                self._VV = (tmp - 80) * 5 + 30
+            elif tmp in [90,91]:  self._VV = 0
+            elif tmp == 92:       self._VV = 2
+            elif tmp == 93:       self._VV = 5
+            elif tmp == 94:       self._VV = 10
+            elif tmp == 94:       self._VV = 10
+            elif tmp == 95:       self._VV = 20
+            elif tmp == 96:       self._VV = 40
+            elif tmp == 97:       self._VV = 100
+            elif tmp == 98:       self._VV = 200
+            elif tmp == 99:       self._VV = 500
 
     # ----------------------
     def _decode_Nddff(self, x):
@@ -418,14 +438,20 @@ class synopmessage():
         if not x[1:3] == "//":
             self._dd  = int(x[1:3])
         if not x[3:] == "//":
-            self._ff  = int(x[3:])
+            self._ff  = int(x[3:]) * 10
+            if self._knots is None:
+                raise Exception("YYGGggi did not provide any wind speed units, but now " + \
+                        "wind speed in Nddff has been found! That's not good. Stop.")
             if self._knots:
                 self._ff = int(float(self._ff) * 0.5144447)
 
     # ----------------------
     def _decode_00fff(self, x): 
         if len(x) == 0: return
-        self._ff  = int(x[2:]) # Overwrites self._ff of Nddff if set
+        self._ff  = int(x[2:]) * 10# Overwrites self._ff of Nddff if set
+        if self._knots is None:
+            raise Exception("YYGGggi did not provide any wind speed units, but now " + \
+                    "wind speed in 00fff has been found! That's not good. Stop.")
         if self._knots:
             self._ff = int(float(self._ff) * 0.5144447)
 
@@ -585,6 +611,7 @@ class synopmessage():
 
 
     # ----------------------
+    # Message which is unused in FM-12 format
     def _decode_333_0XXXX(self, x):
         # Unused
         return
@@ -636,9 +663,8 @@ class synopmessage():
         self._sunday = None
         if len(x) == 0: return
         # Convert to minutes (what's delivered by BUFR)
-        print(x)
         if not x[2:] == "///":
-            self._sunday = int(x[2:]) / 10 * 60
+            self._sunday = int(x[2:]) * 360 # 10 * 3600
 
     # ----------------------
     def _decode_333_2FFFF(self, x):
@@ -664,7 +690,7 @@ class synopmessage():
         if len(x) == 0: return
         # Convert to minutes (what's delivered by BUFR)
         if not x[3:] == "//":
-            self._sun = int(x[3:]) / 10 * 60
+            self._sun = int(x[3:]) * 360 #/ 10 * 3600
 
     # ----------------------
     def _decode_333_6RRRt(self, x):
@@ -676,8 +702,12 @@ class synopmessage():
 
     # ----------------------
     def _decode_333_89blocks(self, x):
-        self._ffx    = None
-        self._ffinst = None
+        self._ffx     = None
+        self._ffmin6  = None
+        self._ffmean6 = None
+        self._ffmax6  = None
+        self._ff6     = None
+        self._ffx6    = None
         if len(x) == 0: return
         tmp = self.regex89.findall(x)
         if len(tmp[0]) == 0: return
@@ -688,14 +718,29 @@ class synopmessage():
         # 912ff -- Hoechstes 10-Minuten-Mittel der Windgeschwindigkeit
         #          seit dem letzten synoptischen Haupttermin (> 10,5 m/s)
         for x in tmp:
+            if self._knots is None:
+                raise Exception("YYGGggi did not provide any wind speed units, but now " + \
+                        "wind speed in {:s} has been found! That's not good. Stop.".format(x[:3]))
             if x[:3] == "910":
-                self._ffinst = int(x[3:])
-                if self._knots:
-                    self._ffinst = int(float(self._ffinst) * 0.5144447)
-            elif x[:3] == "911":
-                self._ffx    = int(x[3:])
+                self._ffx = int(x[3:]) * 10
                 if self._knots:
                     self._ffx = int(float(self._ffx) * 0.5144447)
+            elif x[:3] == "911":
+                self._ffx6 = int(x[3:]) * 10
+                if self._knots:
+                    self._ffx6 = int(float(self._ffx6) * 0.5144447)
+            elif x[:3] == "912":
+                self._ffmax6 = int(x[3:]) * 10
+                if self._knots:
+                    self._ffmax6  = int(float(self._ffmax6) * 0.5144447)
+            elif x[:3] == "913":
+                self._ffmean6 = int(x[3:]) * 10
+                if self._knots:
+                    self._ffmean6  = int(float(self._ffmean6) * 0.5144447)
+            elif x[:3] == "914":
+                self._ffmin6 = int(x[3:]) * 10
+                if self._knots:
+                    self._ffmin6  = int(float(self._ffmin6) * 0.5144447)
 
 
 
@@ -779,7 +824,7 @@ if __name__ == "__main__":
         sys.exit(" --- development stop (--testfile) ---- ")
 
     # The year ...
-    for year in range(2016, int(dt.date.today().strftime("%Y")) + 1):
+    for year in range(2014, int(dt.date.today().strftime("%Y")) + 1):
 
         for mon in range(1, 13):
 
@@ -828,6 +873,11 @@ if __name__ == "__main__":
     
                     uid = urllib2.urlopen(url)
                     content = uid.readlines()
+                    if len(content) == 0:
+                        print("    No data for this request, create empy file")
+                        fid = open(synfile, "w")
+                        fid.close()
+                        break;
                     uid.close()
                     # If we overstressed ogimet: do not save, sleep 1 minute,
                     # and try again.
@@ -851,9 +901,9 @@ if __name__ == "__main__":
             # For database: generate a column vector and fetch data
             colnames = ["datumsec", "T", "Td", "Tmin12", "Tmax12",
                         "p", "pmsl", "pch", "ptend",
-                        "dd", "ff", "ffx", "ffinst",
                         "rr6", "rr12", "rr24",
-                        "ww", "W1", "W2", "sun", "sunday"]
+                        "VV", "ww", "W1", "W2", "sun", "sunday", "N",
+                        "dd", "ff", "ffx", "ffmin6", "ffmean6", "ffmax6", "ff6", "ffx6"]
             data = []
             for rec in messages():
                 data.append(rec.get_tuple(colnames))
@@ -861,7 +911,7 @@ if __name__ == "__main__":
 
             # Development output
             if not args["latest"]:
-                show_tab(colnames, data, n = 5)
+                show_tab(colnames, data)#, n = 5)
             else:
                 show_tab(colnames, data)
 

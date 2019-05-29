@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-06 17:13 on marvin
+# - L@ST MODIFIED: 2018-11-12 07:48 on marvin
 # -------------------------------------------------------------------
 
     rm(list=ls())
@@ -133,33 +133,18 @@
 # Interpolate data now
 # ---------------------------------------------------------------------
     # Testing
-    #testfile <- "netcdf/GFS_20181106_0000_combined.nc"
-    #message(sprintf("Reading %s\n\n", testfile))
-    #x <- ipfun(testfile, stations = stations, station = "IBK", stoponerror = TRUE)
-    #stop('-dev-')
+    ##library("devtools")
+    ##load_all("mospack")
+    ##testfile <- "netcdf/GFS_20181106_0000_combined.nc"
+    ##message(sprintf("Reading %s\n\n", testfile))
+    ##x <- ipfun(testfile, stations = stations, stoponerror = TRUE)
+    ###stop('-dev-')
 
     # Interpolate on three cores ...
-    x <- mclapply(ncfiles, FUN = ipfun, stations = stations,
-                  station = "IBK", mc.cores = 3)
+    x <- mclapply(ncfiles, FUN = ipfun, stations = stations, mc.cores = 1)
     
+    stop("End of interpolation")
     
-    combine_zoo <- function(stn, x, step) {
-        data <- list()
-        for ( rec in x ) {
-            stp <- step
-            rec <- subset(rec[[stn]], step == stp)
-            if ( nrow(rec) == 0 ) next
-            data[[length(data)+1]] <- rec
-        }
-        print(table(sapply(data, ncol)))
-        data <- do.call(rbind, data)
-        # Delete empty cols
-        idx <- which(colSums(!is.na(data)) == 0)
-        if ( length(idx) > 0 ) data <- data[,-idx]
-        return(data)
-    }
-    data18 <- lapply(setNames(names(x[[1]]), names(x[[1]])), combine_zoo, x = x, step = 18)
-    u <- data18
 
 
 

@@ -85,6 +85,3 @@ databases with the observations (folder `obs_sqlite3`).  Requires, of course,
 sqlite3 and the corresponding python package to be installed.
 
 
-
-
-
