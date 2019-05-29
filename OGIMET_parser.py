@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-02, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-04 12:00 on marvin
+# - L@ST MODIFIED: 2019-05-29 20:01 on pc24-c707
 # -------------------------------------------------------------------
 
 
@@ -578,6 +578,7 @@ class read_obs_config():
         self.read(file)
 
         for key in ["sqlite3dir", "htmldir"]:
+            print(key)
             if not hasattr(self, "_{:s}".format(key)):
                 raise ValueError("misspecification in config file for \"{:s}\"".format(key) + \
                         " in [observations] section")
@@ -619,13 +620,6 @@ class read_obs_config():
         except:
             pass
 
-        # Trying to create output dir
-        if not os.path.isdir(self.get("htmldir")):
-            try:
-                os.makedirs(self._sqlite3dir)
-            except Exception as e:
-                raise Exception(e)
-
         # --------------
         # sqlite3 output dir
         try:
@@ -634,9 +628,17 @@ class read_obs_config():
             pass
 
         # Trying to create output dir
+        print(self.get("sqlite3dir"))
+        if not os.path.isdir(self.get("htmldir")):
+            try:
+                os.makedirs(self.get("htmldir"))
+            except Exception as e:
+                raise Exception(e)
+
+        # Trying to create output dir
         if not os.path.isdir(self.get("sqlite3dir")):
             try:
-                os.makedirs(self._sqlite3dir)
+                os.makedirs(self.get("sqlite3dir"))
             except Exception as e:
                 raise Exception(e)
 
