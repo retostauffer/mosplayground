@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-12-10 17:04 on marvin
+# - L@ST MODIFIED: 2019-05-30 09:55 on pc24-c707
 # -------------------------------------------------------------------
 
 
@@ -203,7 +203,7 @@ class get_synop_messages():
 
     # Extracting valid synop messages, pick date information.
     #                     stn        date           YYGGggi  stn    message
-    regex = re.compile("^([0-9]+),([0-9,]{16}),AAXX\s(.{5})\s([0-9]+)\s([^=.*])[=]+$", re.M)
+    regex = re.compile("^([0-9]+),([0-9,]{16}),AAXX\s(.{5})\s([0-9]+)\s([^=.]+)[=]+$", re.M)
 
     def __init__(self, file, verbose = False):
         """get_synop_messages(file, verbose = False)
@@ -232,6 +232,7 @@ class get_synop_messages():
             raise Exception("problems reading \"{s:}\". {:s}".format(file, e))
 
         import re
+        ####for i in range(0, 5): print(content[i])
         mtch = self.regex.findall("\n".join(content))
         if verbose: print("Found {:d} messages in file".format(len(mtch)))
 
@@ -308,6 +309,9 @@ class synopmessage():
         self._station   = int(x[0])
         self._datetime  = dt.datetime.strptime(x[1], "%Y,%m,%d,%H,%M")
         self._datumsec  = int(self._datetime.strftime("%s"))
+
+        print("Message for station {0:d}, datetime {1:s}".format(self._station,
+              self._datetime.strftime("%Y-%m-%d %H:%M")))
 
         self._decode_YYGGggi(x[2])
         self._decode_message(x[4])
@@ -406,7 +410,7 @@ class synopmessage():
         self._VV = None
         if len(x) == 0: return
         # Else decode
-        self._ir = int(x[0])
+        self._ir = None if x[0] == "/" else int(x[0])
         self._ix = int(x[1])
         self._h  = None if x[2]  == "/"  else int(x[2])
         if not x[3:] == "//":
@@ -670,18 +674,21 @@ class synopmessage():
     def _decode_333_2FFFF(self, x):
         self._gloday = None
         if len(x) == 0: return
+        if "/" in x[1:]: return
         self._gloday = int(x[1:])
 
     # ----------------------
     def _decode_333_3FFFF(self, x):
         self._difday = None
         if len(x) == 0: return
+        if "/" in x[1:]: return
         self._difday = int(x[1:])
 
     # ----------------------
     def _decode_333_4FFFF(self, x):
         self._sensday = None
         if len(x) == 0: return
+        if "/" in x[1:]: return
         self._sensday = int(x[1:])
 
     # ----------------------
@@ -894,7 +901,8 @@ if __name__ == "__main__":
                         break;
     
             print("Reading {:s}".format(synfile))
-            messages = get_synop_messages(synfile, verbose = False)
+            messages = get_synop_messages(synfile, verbose = True)
+            #messages = get_synop_messages(synfile, verbose = False)
     
 
 
@@ -915,11 +923,12 @@ if __name__ == "__main__":
             else:
                 show_tab(colnames, data)
 
-            # Define and open sqlite3 database
-            sql3file = "obs_{:d}.sqlite3".format(args["station"])
-            db = obs_db(config.get("sqlite3dir"), sql3file, colnames)
-    
-            db.write(colnames, data)
+            # Define and open sqlite3 database if we have data.
+            if len(data) > 0:
+                sql3file = "obs_{:d}.sqlite3".format(args["station"])
+                print("Write into {:s}".format(sql3file))
+                db = obs_db(config.get("sqlite3dir"), sql3file, colnames)
+                db.write(colnames, data)
         
             # If only latest was requested, stop here.
             if args["latest"]:
