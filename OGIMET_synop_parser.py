@@ -7,7 +7,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-11-04, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2019-05-30 09:55 on pc24-c707
+# - L@ST MODIFIED: 2019-06-04 09:38 on pc24-c707
 # -------------------------------------------------------------------
 
 
@@ -240,7 +240,9 @@ class get_synop_messages():
         for rec in mtch:
             # NIL message: skip
             if rec[4].strip() == "NIL": continue
-            # Else prse
+            # If the message starts with 333: skip
+            if re.match("^333\s.*", rec[4]): continue
+            # Else parse
             tmp = synopmessage(rec, verbose)
             if verbose: print(tmp)
             self._data.append(tmp)
@@ -632,6 +634,7 @@ class synopmessage():
         self._Tmin12 = None
         self._Tmin15 = None
         if len(x) == 0: return
+        if x[1:] == "////": return
         t = int(x[2:])
         if int(x[1]) == 1: t = -t
 
@@ -901,8 +904,8 @@ if __name__ == "__main__":
                         break;
     
             print("Reading {:s}".format(synfile))
-            messages = get_synop_messages(synfile, verbose = True)
-            #messages = get_synop_messages(synfile, verbose = False)
+            #messages = get_synop_messages(synfile, verbose = True)
+            messages = get_synop_messages(synfile, verbose = False)
     
 
 
