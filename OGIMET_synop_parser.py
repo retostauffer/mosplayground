@@ -626,6 +626,7 @@ class synopmessage():
     def _decode_333_1sTTT(self, x):
         self._Tmax12 = None
         if len(x) == 0: return
+        if x[1:] == "////": return
         self._Tmax12 = int(x[2:])
         if int(x[1]) == 1: self._Tmax12 = -self._Tmax12
 
