@@ -10,7 +10,7 @@
 # -------------------------------------------------------------------
 # - EDITORIAL:   2018-10-11, RS: Created file on thinkreto.
 # -------------------------------------------------------------------
-# - L@ST MODIFIED: 2018-11-06 16:25 on pc24-c707
+# - L@ST MODIFIED: 2019-08-05 10:42 on pc24-c707
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -137,12 +137,28 @@ class idx_entry(object):
         self._var        = str(args[1])
         self._lev        = str(args[2])
         self._byte_end   = False
+        # Initial values, may be changed later on
+        self._duration = None      # current value
+        self._duration_info = None # current value
 
+        # Replace brackets
+        from re import sub
+        self._lev = sub("(\(|\)|\[|\]|\{|\})", "", self._lev)
+
+        # If entry [3] matches the pattern: extract duration AND
+        # forecast step. Else, element [3] seems to be the forecast step.
         mtch = re.search("^([0-9]+)-([0-9]+)$", args[3])
         if mtch:
+            # Calculate the forecasted time period/duration
+            self._duration = int(mtch.group(2)) - int(mtch.group(1))
+            self._duration_info = args[5].strip()
+            # Convert to hours
+            if re.match("days?", args[4]): self._duration *= 24
+            # Forecast step
             self._step = int(mtch.group(2))
         else:
-            self._step = int(args[3])
+            # Forecast step
+            self._step     = int(args[3])
 
     def add_end_byte(self, x):
         """add_end_byte(x)
@@ -178,15 +194,45 @@ class idx_entry(object):
 
         Returns
         -------
-        Returns a character string "<param name>:<param level>".
+        Returns a character string "<param name>:<param level>" OR
+        "<param name>:<param level>:<duration info>" if it is an aggregated
+        value. E.g., ACPCP can return "ACPCP:surface:6h acc".
         """
         try:
             var = getattr(self, "_var")
             lev = getattr(self, "_lev")
+            dur = self.duration()
         except Exception as e:
             raise Exception(e)
 
-        return "{:s}:{:s}".format(var,lev)
+        if dur is None:
+            res = "{:s}:{:s}:cur".format(var, lev)
+        else:
+            res = "{:s}:{:s}:{:s}".format(var, lev, dur)
+
+        return(res)
+
+    def duration(self):
+        """duration()
+
+        Returns
+        -------
+        A character string or None. If string, the string is
+        of the following form "Xh TTT" where
+        X ([0-9]+) is the duration/period in hours, TTT the type of
+        measure. As an example, 6 hour accumulated precipitation will
+        return a duration-string "6h acc". If no period/duration is found
+        (forecasted value/message is the current value) None will be
+        returned.
+        """
+        if self._duration is None and self._duration_info is None:
+            duration = None
+        elif self._duration is not None and self._duration_info is not None:
+            duration = "{0:d}h {1:s}".format(self._duration, self._duration_info)
+        else:
+            raise Exception("Problems with the _duration/_duration_info. Stop.")
+       
+        return duration
 
     def step(self):
         """step()
@@ -220,8 +266,9 @@ class idx_entry(object):
             end = "end of file"
         else:
             end = "{:d}".format(self._byte_end)
-        return "IDX ENTRY: {:10d}-{:>10s}, '{:s}' (+{:d}h)".format(self._byte_start,
-                end, self.key(), self.step())
+        return "IDX ENTRY: {:10d}-{:>10s}, '{:s}' (+{:d}h; {:s})".format(self._byte_start,
+                end, self.key(), self.step(),
+                "current value" if self.duration() is None else self.duration())
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
@@ -274,14 +321,15 @@ def parse_index_file(idxfile, remote = True):
     # variable name, and variable level)
     import re
     #                       hour            param     level     step
-    comp = re.compile("^\d+:(\d+):d=\d{10}:([^:.?]+):([^:\\..?]*):([0-9-]+)\shour\s([a-z]+\s)?fcst.*$")
+    comp = re.compile("^\d+:(\d+):d=\d{10}:([^:.?]+):([^:\\..?]*):([0-9-]+)\s(days?|hour)\s([a-z]+\s)?fcst.*$")
     byte = 1 # initial byte
     for line in data:
         if len(line) == 0: continue
         mtch = re.findall(comp, line.replace(".", "-"))
         if not mtch:
             raise Exception("whoops, pattern mismatch \"{:s}\"".format(line))
-        # Else crate the variable hash
+        # Else crate the idx_entry (object of class idx_entry which takes up
+        # the information from the index file)
         idx_entries.append(idx_entry(mtch[0]))
 
     # Now we know where the message start (bytes), but we do not
@@ -293,6 +341,7 @@ def parse_index_file(idxfile, remote = True):
             idx_entries[k].add_end_byte(idx_entries[k+1].start_byte() - 1)
 
     # Go trough the entries to find the messages we request for.
+    #for rec in idx_entries: print(rec)
     return idx_entries
 
 
@@ -342,8 +391,8 @@ def create_index_file(grbfile):
     
     import subprocess as sub
     import os
-    print(tmp1.name)
-    print(grbfile)
+    #print(tmp1.name)
+    #print(grbfile)
     os.system("wgrib2 {:s}".format(tmp1.name))
     p = sub.Popen(["wgrib2", tmp1.name],
                   stdout = sub.PIPE, stderr = sub.PIPE)
@@ -392,6 +441,8 @@ def get_required_bytes(idx, params, step, stopifnot = False):
     Returns a list of bytes (for curl).
     """
 
+    import re
+
     # Crate a list of the string if only one string is given.
     if isinstance(params, str): params = [params]
     if not isinstance(params, list):
@@ -400,22 +451,49 @@ def get_required_bytes(idx, params, step, stopifnot = False):
         raise ValueError("step has to be of tyep int")
 
     # Go trough the entries to find the messages we request for.
-    res = []
-    found = []
+    res     = []
+    found   = []
+    missing = []
     for x in idx:
         if not x.step() == step: next
-        if x.key() in params:
+        count = 0
+        for rec in params:
+            if re.match(rec, x.key()): count = count + 1
+        if count == 1:
             res.append(x.range())
             found.append(x.key())
-
-    missing = []
-    for rec in params:
-        if not rec in found:
+        elif count > 0:
+            raise Exception("Expression \"{:s}\" matches multiple entries in the index file!".format(
+                            x.key()))
+        else: # count == 0
             missing.append(rec)
+
+    # Go trough the entries to find the messages we request for.
+    res     = []
+    found   = []
+    missing = []
+    for param in params:
+        count = 0
+        msg_found = None
+        for x in idx:
+            if not x.step() == step: next
+            if re.match(param, x.key()):
+                count = count + 1
+                msg_found = x # Leep this message
+        if count == 1:
+            res.append(msg_found.range())
+            found.append(msg_found.key())
+        elif count > 0:
+            raise Exception("Expression \"{:s}\"".format(param) + \
+                            " matches multiple entries in the index file!")
+        else: # count == 0
+            missing.append(param)
+
+    # Missing messages?
     if len(missing) > 0:
         print("[!] Could not find: {:s}".format(", ".join(missing)))
         if stopifnot: raise Exception("Some parameters not found in index file! Check config.")
-        
+
     # Return ranges to be downloaded
     return res
 
@@ -429,10 +507,8 @@ def download_range(grib, local, range):
         req.add_header("Range", "bytes={:s}".format(",".join(range)))
         resp = urllib2.urlopen(req)
     except:
-        print("[!] Problems downloading the data.\n    Return None, trying to continue ...")
-        import sys
-        sys.exit(3)
-        return None
+        raise Exception("[!] Problems downloading the data.\n    Return None, trying to continue ...")
+        #return None
 
     with open(local, "wb") as fid: fid.write(resp.read())
     return True
@@ -575,6 +651,14 @@ class read_config():
         except:
             return
 
+        # Adding ':cur' if needed (the default, current value)
+        from re import compile
+        import re
+        pattern = re.compile(".*?:.*?:.*?")
+        for key,val in self.params.iteritems():
+            if not pattern.match(val):
+                self.params[key] = "{:s}:cur".format(val)
+            
     def _read_steps(self, CNF):
 
         try:
@@ -704,14 +788,22 @@ def split_grib_file(gribfile, filedir, date, step, params, delete = True):
     # Split file into parameter-specific grib files
     gfs_params = [x.key() for x in idx]
     for shortName,param in params.iteritems():
-        k = [i for i,x in enumerate(gfs_params) if x == param]
-        if not len(k) == 1:
-            raise Exception("cannot find a specific parameter in the index file .. hmm.")
+        # Initial: not yet found
+        msg_index = []
+        # Find all grib messages matching the current 'param' definition (regex)
+        for msg in range(0, len(idx)):
+            if not idx[msg].step() == step: next
+            if re.match(param, idx[msg].key()): msg_index.append(msg)
+        # Check if we found the message once, only once
+        if not len(msg_index):
+            raise Exception("Parameter \"{:s}\" ".format(param) + \
+                            "{:d} times (expected: once) ".format(len(msg_index)) + \
+                            "in the downloaded and subsetted grib file.")
 
         # Write this specific message into a new file
         outfile = get_param_file_name(filedir, date, step, shortName)
         cmd = ["wgrib2", files["local"] if subset is None else files["subset"],
-                "-d", "{:d}".format(1 + k[0]), "-grib",
+                "-d", "{:d}".format(1 + msg_index[0]), "-grib",
                 outfile["local"] if subset is None else outfile["subset"]]
         p = sub.Popen(cmd, stdout = sub.PIPE, stderr = sub.PIPE)
         out, err = p.communicate()
