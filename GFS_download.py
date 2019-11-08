@@ -49,10 +49,11 @@ def get_file_names(config, date, step, filedir):
     name of the local subset ("subset").
     """
     from os.path import join
+    import numpy
     import datetime as dt
     if not isinstance(filedir, str):
         raise ValueError("filedir has to be a string (get_file_names function)")
-    if not isinstance(step, int):
+    if not isinstance(step, int) and not isinstance(step, numpy.int64):
         raise ValueError("step has to be an integer (get_file_names function)")
 
     # If forecast run is not older than 5 days
@@ -76,7 +77,11 @@ def get_file_names(config, date, step, filedir):
              "idx"    : join(baseurl, idxurl),
              "local"  : join(filedir, local),
              "subset" : join(filedir, subset)}
-    for key,val in files.iteritems(): print("- {:<10s} {:s}".format(key, val))
+    
+    if sys.version_info[0] < 3:
+        for key,val in files.iteritems(): print("- {:<10s} {:s}".format(key, val))
+    else:
+        for key,val in files.items(): print("- {:<10s} {:s}".format(key, val))
 
     return files
 
@@ -107,9 +112,10 @@ def get_param_file_name(filedir, date, step, param):
     """
     import os
     import datetime as dt
+    import numpy
     if not isinstance(filedir, str):
         raise ValueError("filedir has to be a string")
-    if not isinstance(step, int):
+    if not isinstance(step, int) and not isinstance(step, numpy.int64):
         raise ValueError("step has to be an integer")
     if not isinstance(param, str):
         raise ValueError("param has to be a string")
@@ -292,17 +298,29 @@ def parse_index_file(idxfile, remote = True):
     """
 
     if remote:
-        import urllib2
-        try:
-            req  = urllib2.Request(idxfile)
-            data = urllib2.urlopen(req).read()
-        except Exception as e:
-            print("[!] Problems reading index file\n    {:s}\n    ... return None".format(idxfile))
-            return None
-        # If the file is empty
-        if len("".join(data)) == 0:
-            print("[!] Problems reading index file, was emptu")
-            return None
+
+        if sys.version_info[0] < 3:
+            import urllib2
+            try:
+                req  = urllib2.Request(idxfile)
+                data = urllib2.urlopen(req).read()
+            except Exception as e:
+                print("[!] Problems reading index file\n    {:s}\n    ... return None".format(idxfile))
+                return None
+            # If the file is empty
+            if len("".join(data)) == 0:
+                print("[!] Problems reading index file, was emptu")
+                return None
+        else:
+            from urllib.request import urlopen
+            try:
+                data = urlopen(idxfile).read()
+            except Exception as e:
+                print("[!] Problems reading index file\n    {:s}\n    ... return None".format(idxfile))
+                return None
+
+            data = data.decode("utf-8")
+
     else:
         from os.path import isfile
         if not isfile(idxfile):
@@ -442,12 +460,13 @@ def get_required_bytes(idx, params, step, stopifnot = False):
     """
 
     import re
+    import numpy
 
     # Crate a list of the string if only one string is given.
     if isinstance(params, str): params = [params]
     if not isinstance(params, list):
         raise ValueError("params has to be a single string or a list")
-    if not isinstance(step, int):
+    if not isinstance(step, int) and not isinstance(step, numpy.int64):
         raise ValueError("step has to be of tyep int")
 
     # Go trough the entries to find the messages we request for.
@@ -500,15 +519,23 @@ def get_required_bytes(idx, params, step, stopifnot = False):
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
 def download_range(grib, local, range):
-    import urllib2
+
     print("- Downloading data for {:s}".format(local))
-    try:
-        req = urllib2.Request(grib)
-        req.add_header("Range", "bytes={:s}".format(",".join(range)))
-        resp = urllib2.urlopen(req)
-    except:
-        raise Exception("[!] Problems downloading the data.\n    Return None, trying to continue ...")
-        #return None
+    if sys.version_info[0] < 3:
+        import urllib2
+        try:
+            req = urllib2.Request(grib)
+            req.add_header("Range", "bytes={:s}".format(",".join(range)))
+            resp = urllib2.urlopen(req)
+        except:
+            raise Exception("[!] Problems downloading the data.\n    Return None, trying to continue ...")
+            #return None
+    else:
+        from urllib.request import urlopen
+        try:
+            resp = urlopen(grib)
+        except:
+            raise Exception("[!] Problems downloading the data.\n    Return None, trying to continue ...")
 
     with open(local, "wb") as fid: fid.write(resp.read())
     return True
@@ -581,8 +608,12 @@ class read_config():
             raise ValueError("the file file=\"{:s}\" does not exist".format(file))
                 
         # Read parameter configuration.
-        import ConfigParser
-        CNF = ConfigParser.ConfigParser()
+        import sys
+        if sys.version_info[0] < 3:
+            import ConfigParser as configparser
+        else:
+            import configparser
+        CNF = configparser.RawConfigParser()
         CNF.read(file)
 
         # Append file
@@ -655,9 +686,16 @@ class read_config():
         from re import compile
         import re
         pattern = re.compile(".*?:.*?:.*?")
-        for key,val in self.params.iteritems():
-            if not pattern.match(val):
-                self.params[key] = "{:s}:cur".format(val)
+        #for key,val in self.params.iteritems():
+        import sys
+        if sys.version_info[0] < 3:
+            for key,val in self.params.iteritems():
+                if not pattern.match(val):
+                    self.params[key] = "{:s}:cur".format(val)
+        else:
+            for key,val in self.params.items():
+                if not pattern.match(val):
+                    self.params[key] = "{:s}:cur".format(val)
             
     def _read_steps(self, CNF):
 
@@ -741,7 +779,12 @@ def check_files_exist(files, params, subset_files, split_files):
             else:                                     return True
     # Else we have to check all single files
     else:
-        for rec in params.iteritems():
+        if sys.version_info[0] < 3:
+            records = params.iteritems()
+        else:
+            records = params.items()
+
+        for rec in records:
             tmp = get_param_file_name(filedir, date, step, rec[0])
             if subset_files:
                 if not os.path.isfile(tmp["subset"]):
@@ -884,7 +927,7 @@ if __name__ == "__main__":
     if len(config.params) == 0:
         raise Exception("No parameters to download! Check config files and --set option")
 
-    bar(); print config; bar()
+    bar(); print(config); bar()
 
     # Specify and create output directory if necessary
     filedir = "{:s}/{:s}".format(config.gribdir, date.strftime("%Y%m%d%H%M"))
@@ -925,7 +968,10 @@ if __name__ == "__main__":
 
         # List of the GFS parameter names, used to check what
         # to download based on the inventory or index file.
-        gfs_params = [x[1] for x in config.params.iteritems()]
+        if sys.version_info[0] < 3:
+            gfs_params = [x[1] for x in config.params.iteritems()]
+        else:
+            gfs_params = [x[1] for x in config.params.items()]
 
         # Read/parse index file (if possible) and identify the
         # required sections (byte-sections) for curl download.
