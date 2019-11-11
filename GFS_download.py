@@ -830,7 +830,11 @@ def split_grib_file(gribfile, filedir, date, step, params, delete = True):
 
     # Split file into parameter-specific grib files
     gfs_params = [x.key() for x in idx]
-    for shortName,param in params.iteritems():
+    if sys.version_info[0] < 3:
+        records = params.iteritems()
+    else:
+        records = params.items()
+    for shortName,param in records:
         # Initial: not yet found
         msg_index = []
         # Find all grib messages matching the current 'param' definition (regex)
@@ -995,7 +999,7 @@ if __name__ == "__main__":
         if not check is None and not subset is None:
             WE  = "{:.2f}:{:.2f}".format(subset["W"], subset["E"])
             SN  = "{:.2f}:{:.2f}".format(subset["S"], subset["N"])
-            cmd = ["wgrib2", files["local"], "-small_grib", WE, SN, files["subset"]] 
+            cmd = ["wgrib2", "-g2clib", "0", files["local"], "-small_grib", WE, SN, files["subset"]] 
             print("- Subsetting: {:s}".format(" ".join(cmd)))
             p = sub.Popen(cmd, stdout = sub.PIPE, stderr = sub.PIPE) 
             out,err = p.communicate()
