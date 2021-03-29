@@ -470,25 +470,6 @@ def get_required_bytes(idx, params, step, stopifnot = False):
         raise ValueError("step has to be of tyep int")
 
     # Go trough the entries to find the messages we request for.
-    #res     = []
-    #found   = []
-    #missing = []
-    #for x in idx:
-    #    if not x.step() == step: next
-    #    count = 0
-    #    for rec in params:
-    #        if re.match(rec, x.key()): count = count + 1
-    #    if count == 1:
-    #        res.append(x.range())
-    #        found.append(x.key())
-    #    elif count > 0:
-    #        raise Exception("Expression \"{:s}\" matches multiple entries in the index file!".format(
-    #                        x.key()))
-    #    else: # count == 0
-    #        print(rec)
-    #        missing.append(rec)
-
-    # Go trough the entries to find the messages we request for.
     res     = []
     found   = []
     missing = []
@@ -497,7 +478,6 @@ def get_required_bytes(idx, params, step, stopifnot = False):
         msg_found = None
         for x in idx:
             if not x.step() == step: next
-            print("   {:s}    {:s}".format(param, x.key()))
             if re.match(param, x.key()):
                 count = count + 1
                 msg_found = x # Leep this message
