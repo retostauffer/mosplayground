@@ -12,14 +12,26 @@
 # -------------------------------------------------------------------
 
 
-date1=`date "+%Y-%m-%d" -d "1days ago"`
-date2=`date "+%Y-%m-%d" -d "2days ago"`
+N=5
 
+day=0
+while [ $day -le $N ] ; do
+    thedate=`date "+%Y-%m-%d" -d "${day}days ago"`
+    echo $thedate
+    printf "* TRYING TO DOWNLOAD %s\n" "${thedate}"
+    python GFS_download.py -r 0 -d ${thedate}
 
-printf "\n--------------------------------------\n"
-printf "* TRYING TO DOWNLOAD %s\n" "${date1}"
-python GFS_download.py -r 0 -d ${date1}
+    # Go one further into the past
+    let day=$day+1
+done
 
-printf "\n--------------------------------------\n"
-printf "* TRYING TO DOWNLOAD %s\n" "${date2}"
-python GFS_download.py -r 0 -d ${date2}
+#date1=`date "+%Y-%m-%d" -d "1days ago"`
+#date2=`date "+%Y-%m-%d" -d "2days ago"`
+#
+#printf "\n--------------------------------------\n"
+#printf "* TRYING TO DOWNLOAD %s\n" "${date1}"
+#python GFS_download.py -r 0 -d ${date1}
+#
+#printf "\n--------------------------------------\n"
+#printf "* TRYING TO DOWNLOAD %s\n" "${date2}"
+#python GFS_download.py -r 0 -d ${date2}
