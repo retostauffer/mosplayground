@@ -234,11 +234,12 @@ class get_synop_messages():
         try:
             with open(file, "rb") as gid:
                 content = gid.readlines()
+            if isinstance(content[0], bytes):
+                content = [x.decode() for x in content]
         except Exception as e:
             raise Exception("problems reading \"{s:}\". {:s}".format(file, e))
 
         import re
-        ####for i in range(0, 5): print(content[i])
         mtch = self.regex.findall("\n".join(content))
         if verbose: print("Found {:d} messages in file".format(len(mtch)))
 
@@ -309,17 +310,14 @@ class synopmessage():
         if not len(x) == 5:
             raise ValueError("something wrong with input (length wrong)")
 
-        if verbose:
-            print("---------------------- (MSG)")
-            print(x[4])
-
         import datetime as dt
         self._station   = int(x[0])
         self._datetime  = dt.datetime.strptime(x[1], "%Y,%m,%d,%H,%M")
         self._datumsec  = int(self._datetime.strftime("%s"))
 
-        print("Message for station {0:d}, datetime {1:s}".format(self._station,
-              self._datetime.strftime("%Y-%m-%d %H:%M")))
+        if verbose:
+            print("Message for station {0:d}, datetime {1:s}".format(self._station,
+                  self._datetime.strftime("%Y-%m-%d %H:%M")))
 
         self._decode_YYGGggi(x[2])
         self._decode_message(x[4])
@@ -788,17 +786,17 @@ def show_tab(colnames, data, n = None):
 
     for c in colnames:
         if c == "datumsec":
-            print("{:12s} ".format(c)),
+            print("{:12s} ".format(c), end = "")
         else:
-            print("{:6s} ".format(c)),
+            print("{:6s} ".format(c), end = "")
     print("")
     if n is None: n = len(data)
     for i in range(0, n):
-        for j in range(0, len(data[i])):
+        for j in range(len(colnames)):
             if colnames[j] == "datumsec":
-                print("{:12d} ".format(data[i][j])),
+                print("{:12d} ".format(data[i][j]), end = "")
             else:
-                print("{:6s} ".format(str(data[i][j]))),
+                print("{:6s} ".format(str(data[i][j])), end = "")
         print("")
 
 
@@ -901,15 +899,19 @@ if __name__ == "__main__":
                         fid.close()
                         break;
                     uid.close()
+
+                    # Decoding bytes if needed (Py3)
+                    if PYTHON_VERSION >= 3 and isinstance(content[0], bytes):
+                        content = [x.decode() for x in content]
+
                     # If we overstressed ogimet: do not save, sleep 1 minute,
                     # and try again.
-                    print(str(content[0]))
                     if re.match("Status: 501 Sorry", str(content[0])):
                         print("    Hoppala, overstressed ogimet ... sleep a while and retry")
                         time.sleep(120)
                     else: 
                         fid = open(synfile, "w")
-                        fid.write("".join(str(content)))
+                        fid.writelines(content)
                         fid.close()
                         if args["latest"] is None:
                             print("    Just being nice to ogimet, sleep a bit ...")
@@ -930,7 +932,6 @@ if __name__ == "__main__":
             for rec in messages():
                 data.append(rec.get_tuple(colnames))
 
-
             # Development output
             if not args["latest"]:
                 show_tab(colnames, data)#, n = 5)
@@ -943,31 +944,12 @@ if __name__ == "__main__":
                 print("Write into {:s}".format(sql3file))
                 db = obs_db(config.get("sqlite3dir"), sql3file, colnames)
                 db.write(colnames, data)
-        
+
             # If only latest was requested, stop here.
             if args["latest"]:
                 from os import remove
                 remove(synfile)
                 sys.exit(0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
