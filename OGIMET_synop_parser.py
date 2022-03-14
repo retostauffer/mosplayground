@@ -108,6 +108,9 @@ class obs_db():
 
 class read_obs_config():
 
+    from sys import version_info
+    PYTHON_VERSION = version_info[0]
+
     def __init__(self, file):
         """read_obs_config(file)
 
@@ -150,7 +153,10 @@ class read_obs_config():
         if not os.path.isfile(file):
             raise Exception("file \"{:s}\" does not exist!")
 
-        from ConfigParser import ConfigParser
+        if self.PYTHON_VERSION <= 2:
+            from ConfigParser import ConfigParser
+        else:
+            from configparser import ConfigParser
         CNF = ConfigParser()
         CNF.read(file)
 
@@ -785,7 +791,7 @@ def show_tab(colnames, data, n = None):
             print("{:12s} ".format(c)),
         else:
             print("{:6s} ".format(c)),
-    print ""
+    print("")
     if n is None: n = len(data)
     for i in range(0, n):
         for j in range(0, len(data[i])):
@@ -793,7 +799,7 @@ def show_tab(colnames, data, n = None):
                 print("{:12d} ".format(data[i][j])),
             else:
                 print("{:6s} ".format(str(data[i][j]))),
-        print ""
+        print("")
 
 
 
@@ -820,6 +826,8 @@ if __name__ == "__main__":
     import re
     import numpy as np
     import datetime as dt
+
+    PYTHON_VERSION = sys.version_info[0]
 
     # Reading config file
     config = read_obs_config("config.conf")
@@ -865,7 +873,7 @@ if __name__ == "__main__":
                     "?begin={:s}".format(bgn.strftime("%Y%m%d%H%M")) + \
                     "&end={:s}".format(end.strftime("%Y%m%d%H%M")) + \
                     "&block={:05d}".format(args["station"])
-    
+
             # Download file if required
             if not os.path.isfile(synfile):
                 print("Downloading data from OGIMET CGI")
@@ -875,14 +883,17 @@ if __name__ == "__main__":
                     print("  - Latest {:d} days for {:d}".format(args["latest"], args["station"]))
                 print("  - URL: {:s}".format(url))
 
-                import urllib2
+                if PYTHON_VERSION <= 2:
+                    from urllib2 import urlopen
+                else:
+                    from urllib.request import urlopen
                 import time
                 counter = 0
                 while counter < 10:
 
                     ++counter;
-    
-                    uid = urllib2.urlopen(url)
+
+                    uid     = urlopen(url)
                     content = uid.readlines()
                     if len(content) == 0:
                         print("    No data for this request, create empy file")
@@ -892,23 +903,22 @@ if __name__ == "__main__":
                     uid.close()
                     # If we overstressed ogimet: do not save, sleep 1 minute,
                     # and try again.
-                    if re.match("Status: 501 Sorry", content[0]):
+                    print(str(content[0]))
+                    if re.match("Status: 501 Sorry", str(content[0])):
                         print("    Hoppala, overstressed ogimet ... sleep a while and retry")
                         time.sleep(120)
                     else: 
                         fid = open(synfile, "w")
-                        fid.write("".join(content))
+                        fid.write("".join(str(content)))
                         fid.close()
                         if args["latest"] is None:
                             print("    Just being nice to ogimet, sleep a bit ...")
                             time.sleep(60)
                         break;
-    
+
             print("Reading {:s}".format(synfile))
             #messages = get_synop_messages(synfile, verbose = True)
             messages = get_synop_messages(synfile, verbose = False)
-    
-
 
             # For database: generate a column vector and fetch data
             colnames = ["datumsec", "T", "Td", "Tmin12", "Tmax12",
